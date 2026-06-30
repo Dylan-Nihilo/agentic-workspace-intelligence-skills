@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agentic Coding Audit"
+  short_description: "Fill coding pools in workspace datasources"
+  default_prompt: "Use $agentic-coding-audit to analyze a multi-repo frontend workspace into datasource/pools/coding."

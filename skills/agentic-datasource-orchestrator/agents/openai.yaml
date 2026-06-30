@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agentic Datasource Orchestrator"
+  short_description: "Coordinate progressive datasource builds"
+  default_prompt: "Use $agentic-datasource-orchestrator to coordinate skills that progressively fill a complete workspace datasource."

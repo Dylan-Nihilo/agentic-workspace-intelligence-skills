@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agentic CE Bridge"
+  short_description: "Bridge CE CLI agent output into data pools"
+  default_prompt: "Use $agentic-ce-bridge to run RepoPrompt CE CLI analysis and write structured analyses into a datasource."
