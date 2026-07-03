@@ -791,9 +791,29 @@ function edgeLooksContradicted(edge, nodes, text) {
   const objectToken = object?.path || object?.label
   if (edge.predicate === 'imports' || edge.predicate === 'dynamic-imports') {
     const target = edge.metadata?.target || objectToken
-    return target && !lower.includes(String(target).toLowerCase().replace(/^package:/, '').split('/').pop())
+    return target && !importEvidenceTokens(target).some(token => lower.includes(token.toLowerCase()))
   }
   return false
+}
+
+function importEvidenceTokens(value) {
+  const text = String(value || '').replace(/^package:/, '').trim()
+  const withoutQuery = text.split(/[?#]/)[0]
+  const candidates = [text, withoutQuery]
+  for (const item of [text, withoutQuery]) {
+    const basename = path.posix.basename(item)
+    candidates.push(basename)
+    candidates.push(stripLastExtension(item))
+    candidates.push(stripLastExtension(basename))
+  }
+  return dedupeStrings(candidates)
+    .map(item => item.replace(/^['"]|['"]$/g, '').trim())
+    .filter(item => item.length >= 2)
+}
+
+function stripLastExtension(value) {
+  const ext = path.posix.extname(value)
+  return ext ? value.slice(0, -ext.length) : value
 }
 
 function finalizeFactGraph(builder, inventory, options) {

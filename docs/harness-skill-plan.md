@@ -60,7 +60,7 @@ harness ingest --package <dir> --analysis <file> [--explorer X] [--round N]
 ```
 
 - 封装现有 `writeExplorationAnalysis`(严格校验 + snippet 裁剪 + 合并 + 重投影),追加:
-  - 成功:stdout 输出 JSON `{merged: true, factsAccepted, factsRejected, coverage, openTasks}`,exit 0。
+  - 成功:stdout 输出 JSON `{merged: true, factsAccepted, edgeDelta, edgesRemovedByVerifier, removedEdgesByVerifier, coverage, openTasks}`,exit 0。
   - schema 拒绝:stdout 输出 JSON `{merged: false, issues: [...]}`(逐条可修正的错误),exit 2。**拒绝原因必须机器可读**,agent 靠它自修正重试。
 - 对应任务状态 open→done 的判定沿用现有 gap 重算逻辑。
 
@@ -181,17 +181,25 @@ harness status --package <dir>
 
 实测:Claude 提交的真实事实 `crud.less imports search-item.less`(证据 `src/components/Crud/styles/crud.less:3` 的 `@import "./search-item";`)被 deterministic verifier 以 `evidence text contradicts imports` refuted 删边。原因:import token 检查要求证据文本包含 object 的完整 basename(`search-item.less`),而 Less/JS 导入惯例不带扩展名。**修复**:token 匹配同时尝试去扩展名的 stem(`search-item`);对 `?inline` 等 query 后缀同理剥离。**验收**:重放该 fact 不再被删;构造真错误目标(证据文本与 stem 也不匹配)仍被删。
 
+- [x] 完成:import verifier 已匹配完整目标、去 query/hash 目标、basename、stem。验证:`/tmp/harness-g123-package` 中 `crud.less @import "./search-item";` 对 `search-item.less` 的 fact 返回 `edgesRemovedByVerifier=0`,FactGraph 保留 `file:src/components/Crud/styles/crud.less imports file:src/components/Crud/styles/search-item.less`;错误目标 `not-there.less` 仍被 verifier 删除。
+
 #### G-2 ingest 契约掩盖 verifier 误杀(P1,契约诚实性)
 
 上述误杀发生时 ingest 返回 `merged:true, factsAccepted:1`,仅 `edgeDelta:0` 暗示异常。**修复**:ingest 返回体增加 `edgesRemovedByVerifier`(本次写回后被 verifier 删除的、源自本 analysis 的边数)与对应 edge/reason 列表,worker 才能感知并按 SKILL.md 申诉或降级 openQuestion。**验收**:重放 G-1 场景,返回体明确报告 removed=1 及 reason。
+
+- [x] 完成:普通 exploration ingest 返回 `edgesRemovedByVerifier` 与 `removedEdgesByVerifier[]`。验证:错误目标 replay 返回 `edgesRemovedByVerifier=1`,列表含 `edge:9d3ef32a8395d3e5` 与 reason `evidence text contradicts imports`。
 
 #### G-3 `factsRejected` 恒为 0(P2,契约语义)
 
 ingest 是全有或全无(schema 拒绝走异常路径),`factsRejected` 字段永远是 0,有误导性。删除该字段或改为真实语义。
 
+- [x] 完成:成功 ingest 返回体已移除 `factsRejected`;schema 拒绝仍走 `{merged:false, issues:[...]}`。验证:`/tmp/harness-g123-good.out` 与 `/tmp/harness-g123-bad.out` 均无 `factsRejected` 字段。
+
 #### G-4 流程欠账(重申)
 
 F-4 基线提交至今未做(git log 仍只有 af82261)。当前工作区已被 Codex 清理干净(无关 diff 已还原、outputs 已删),**没有理由再拖**:立即 commit 全部 harness/skill/docs 文件作为基线。
+
+- [x] 完成:已先提交 G-4 基线 `66f481d Add repo understanding harness skill baseline`,包含 `docs/ harnesses/ shared/ scripts/ package.json skills/repo-*`。
 
 **完整 V-1(≥2 轮、≥50 动态边)、V-3(≥3 explorer 并行)在 G-1/G-2 修复后由 Claude 再执行。**
 

@@ -429,6 +429,7 @@ function ingestExplorationAnalysis(packageDir, value, provenance = {}) {
   const root = path.resolve(packageDir)
   const inventory = readJson(path.join(root, 'static', 'inventory.json'))
   const before = readJsonIfExists(path.join(root, 'fact-graph.json')) || { edges: {} }
+  const beforeVerification = readJsonIfExists(path.join(root, 'verification.json')) || { verdicts: [] }
   const existing = readJsonIfExists(path.join(root, 'analyses', 'repo-exploration.json'))
   const base = existing || emptyExplorationAnalysis(inventory.repo)
   const incoming = sanitizeExplorerOutput(value)
@@ -442,13 +443,16 @@ function ingestExplorationAnalysis(packageDir, value, provenance = {}) {
   const validation = writeValidation(root)
   const statusValue = buildHarnessStatus(root, { validation })
   const after = readJsonIfExists(path.join(root, 'fact-graph.json')) || { edges: {} }
+  const afterVerification = readJsonIfExists(path.join(root, 'verification.json')) || { verdicts: [] }
+  const removedEdgesByVerifier = newlyRefutedVerifierEdges(beforeVerification, afterVerification)
   return {
     schemaVersion: 'repo-harness-ingest-result/v1',
     merged: true,
     analysisPath: result.analysisPath,
     factsAccepted: Array.isArray(incoming.facts) ? incoming.facts.length : 0,
-    factsRejected: 0,
     edgeDelta: Object.keys(after.edges || {}).length - Object.keys(before.edges || {}).length,
+    edgesRemovedByVerifier: removedEdgesByVerifier.length,
+    removedEdgesByVerifier,
     coverage: statusValue.coverage,
     openTasks: statusValue.tasks.open,
     nextAction: statusValue.nextAction,
@@ -476,13 +480,25 @@ function ingestVerificationAnalysis(packageDir, value, provenance = {}) {
     merged: true,
     analysisPath: result.analysisPath,
     factsAccepted: 0,
-    factsRejected: 0,
     verdictsAccepted: verifierAnalysis.verdicts.length,
     coverage: statusValue.coverage,
     openTasks: statusValue.tasks.open,
     nextAction: statusValue.nextAction,
     validation: statusValue.validation,
   }
+}
+
+function newlyRefutedVerifierEdges(beforeVerification, afterVerification) {
+  const beforeIds = new Set((beforeVerification.verdicts || [])
+    .filter(item => item.verdict === 'refuted')
+    .map(item => item.edgeId))
+  return (afterVerification.verdicts || [])
+    .filter(item => item.verdict === 'refuted' && item.edgeId && !beforeIds.has(item.edgeId))
+    .map(item => ({
+      edgeId: item.edgeId,
+      reason: item.reason || '',
+      evidenceChecked: item.evidenceChecked || 0,
+    }))
 }
 
 function renderHarnessReport(packageDir, validation) {
