@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repo Understanding"
+  short_description: "Orchestrate evidence-backed repo understanding packages"
+  default_prompt: "Use $repo-understanding to analyze a repository into a verified fact graph, wiki, and report."

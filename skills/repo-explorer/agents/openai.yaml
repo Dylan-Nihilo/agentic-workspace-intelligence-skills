@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repo Explorer"
+  short_description: "Execute one read-only repo exploration bundle"
+  default_prompt: "Use $repo-explorer to process a repo-understanding dispatch bundle and write evidence-backed facts."

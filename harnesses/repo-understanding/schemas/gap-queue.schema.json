@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-gap-queue.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "repoId", "coverageScore", "coverageThreshold", "taskCount", "tasks"],
+  "properties": {
+    "schemaVersion": { "const": "repo-gap-queue/v1" },
+    "repoId": { "type": "string" },
+    "coverageScore": { "type": "number", "minimum": 0, "maximum": 1 },
+    "coverageThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "taskCount": { "type": "number" },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "priority", "explorer", "type", "reason", "relatedNodes", "tokenBudget"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "enum": ["open", "dispatched", "done", "skipped"] },
+          "priority": { "enum": ["high", "medium", "low"] },
+          "explorer": { "type": "string" },
+          "type": { "type": "string" },
+          "reason": { "type": "string" },
+          "relatedNodes": { "type": "array", "items": { "type": "string" } },
+          "tokenBudget": { "type": "number", "minimum": 1 },
+          "dispatch": {
+            "type": "object",
+            "properties": {
+              "round": { "type": "number" },
+              "explorer": { "type": "string" },
+              "dispatchedAt": { "type": "string" },
+              "promptPath": { "type": "string" },
+              "outputPath": { "type": "string" },
+              "schemaPath": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

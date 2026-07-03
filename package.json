@@ -1,0 +1,27 @@
+{
+  "name": "agentic-workspace-intelligence-skills",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "analyze:repo": "node scripts/code-repo-analyzer.mjs",
+    "coding:collect": "node skills/agentic-coding-audit/scripts/collect-static.mjs",
+    "coding:normalize": "node skills/agentic-coding-audit/scripts/normalize-coding-pool.mjs",
+    "coding:export": "node skills/agentic-coding-audit/scripts/export-audit-data.mjs",
+    "datasource:pipeline": "node skills/agentic-datasource-orchestrator/scripts/run-pipeline.mjs",
+    "build:workspace-datasource": "node shared/scripts/build-workspace-datasource.mjs",
+    "understanding:intake": "node harnesses/repo-understanding/scripts/collect-repo-intake.mjs",
+    "understanding:explore-request": "node harnesses/repo-understanding/scripts/build-exploration-request.mjs",
+    "understanding:explore-dispatch": "node harnesses/repo-understanding/scripts/build-explorer-dispatch.mjs",
+    "understanding:write-exploration": "node harnesses/repo-understanding/scripts/write-exploration-analysis.mjs",
+    "understanding:collect-exploration": "node harnesses/repo-understanding/scripts/collect-exploration-evidence.mjs",
+    "understanding:request": "node harnesses/repo-understanding/scripts/build-understanding-request.mjs",
+    "understanding:write-subagent": "node harnesses/repo-understanding/scripts/write-subagent-analysis.mjs",
+    "understanding:validate": "node harnesses/repo-understanding/scripts/validate-understanding.mjs",
+    "understanding:run": "node harnesses/repo-understanding/scripts/run-repo-understanding.mjs",
+    "understanding:harness": "node harnesses/repo-understanding/scripts/harness.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

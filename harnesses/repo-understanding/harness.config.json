@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "coverageThreshold": 0.85,
+  "maxExplorerRounds": 3,
+  "renderNodeLimit": 800,
+  "explorers": {
+    "vue-containment": { "enabled": true, "tokenBudget": 12000 },
+    "route-binding": { "enabled": true, "tokenBudget": 12000 },
+    "dynamic-import": { "enabled": true, "tokenBudget": 10000 },
+    "call-chain": { "enabled": true, "tokenBudget": 18000 },
+    "auth-chain": { "enabled": true, "tokenBudget": 14000 },
+    "data-access": { "enabled": true, "tokenBudget": 16000 },
+    "adversarial-verify": { "enabled": true, "tokenBudget": 8000 },
+    "coverage-directed": { "enabled": true, "tokenBudget": 10000 }
+  },
+  "qualityGates": {
+    "maxAstParseFailureRate": 0.05,
+    "minAcceptedConfidence": 0.5,
+    "requireEvidenceForEveryEdge": true,
+    "requireWikiEvidenceMarks": true,
+    "requireResolvableKnowledgeGraphRefs": true,
+    "protectedFilesMetadataOnly": true
+  }
+}

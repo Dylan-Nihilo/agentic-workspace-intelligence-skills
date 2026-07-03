@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repo Fact Verifier"
+  short_description: "Adversarially verify repo fact graph edges"
+  default_prompt: "Use $repo-fact-verifier to refute or confirm adversarial-verify tasks from a repo-understanding bundle."
