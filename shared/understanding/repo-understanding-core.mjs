@@ -797,7 +797,10 @@ function checkPredicateEvidence(edge, nodes, inventory, inventoryByPath) {
     }
   }
   if (edge.predicate === 'guarded-by') {
-    if (!/@PreAuthorize|@RequiresPermissions|@Secured|\bv-hasPermission\b|\b(checkPermission|permissionFlag|permissionIds|permissions|roles|auth|security|token|jwt|oauth|shiro)\b|权限/i.test(text)) {
+    const guardedText = (edge.evidence || [])
+      .map(item => item.snippet || evidenceTextFromInventory(inventory.repo.path, item))
+      .join('\n') || text
+    if (!/@PreAuthorize|@RequiresPermissions|@Secured|\bv-hasPermission\b|\b(checkPermission|validatePermission|permissionFlag|permissionIds|permissions|roles|auth|authentication|AuthenticationStatus|isAdmin|admin|security|token|jwt|oauth|shiro|shiroFilter|filterChainDefinitions|perms|anon|DataPermission)\b|权限|授权|登录|登陆|密码/i.test(guardedText)) {
       return { ok: false, reason: 'guarded-by evidence lacks a security keyword' }
     }
   }
@@ -1358,9 +1361,14 @@ function extractFileSignals(file, text) {
 }
 
 function isJsRouteConfigFile(filePath, text) {
+  if (isMockOrFixturePath(filePath)) return false
   if (!/(^|\/)(router|routes?|.*router.*|.*routes?)\.(js|jsx|ts|tsx|mjs)$|(^|\/)(router|routes?)\//i.test(filePath)) return false
   if (!/\b(component|children|routes|createRouter|new\s+Router)\b/.test(text)) return false
   return true
+}
+
+function isMockOrFixturePath(filePath) {
+  return /(^|\/)(__mocks__|mocks?|fixtures?)(\/|$)/i.test(filePath)
 }
 
 function buildArchitectureView({ repo, inventory, codeMap, generatedAt }) {
@@ -2225,10 +2233,14 @@ function importRecord(file, target, line, kind) {
 }
 
 function routePathFromAnnotation(annotationName, value) {
-  if (!/Mapping$/.test(annotationName)) return ''
+  if (!isSpringRouteMappingAnnotation(annotationName)) return ''
   const text = String(value || '')
   const match = text.match(/(?:value\s*=\s*)?["']([^"']+)["']/)
   return match?.[1] || ''
+}
+
+function isSpringRouteMappingAnnotation(annotationName) {
+  return /^(RequestMapping|GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping)$/.test(annotationName)
 }
 
 function routeMethodFromAnnotation(annotationName) {

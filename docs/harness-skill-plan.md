@@ -203,6 +203,28 @@ F-4 基线提交至今未做(git log 仍只有 af82261)。当前工作区已被 
 
 **完整 V-1(≥2 轮、≥50 动态边)、V-3(≥3 explorer 并行)在 G-1/G-2 修复后由 Claude 再执行。**
 
+### 产物内容评审新发现(2026-07-03,mp-merchant-access-repo-understanding 正文核读)
+
+#### G-5 wiki 证据标注是装饰性引用,语义边引用率为零(P1,设计承诺打折)
+
+实测:新包 wiki 全部 269 个 `[e:edge:...]` 标注中,contains 占 41%、depends-on 占 35%、imports 占 24%,**guarded-by/calls/routes-to/reads-from 等 137 条 L2 语义边被引用 0 次**。抽样 3 个标注(如权限链叙述句)全部指向 `module:src contains file:X` 平凡边,无行号无片段——句子本身经源码核对是真的(hasPermission.js 确实读 `store.getters.permissionIds`),但点开证据看到的是"src 包含 main.ts",无法证明该句。根因:`projectWiki` 的 `markFirstEdge` 取节点第一条相关边(通常是 contains),而 synthesis JSON 里明明带着正确的 evidenceRefs 未被透传。`validateWiki` 只查 `[e:` 字符串存在,对此完全失明。**修复**:wiki 投影透传 synthesis 各条目的 evidenceRefs;无 synthesis 时按句子涉及谓词选相关语义边;`validateWiki` 抽样检查标注边的 predicate 与所在章节语义匹配(key-flows 章节引用 contains 边即告警)。**验收**:重投影后 wiki 标注中语义边占比 ≥50%,权限链句子的标注可回溯到真实 guarded-by 边。
+
+#### G-6 import 解析器残留两个路径缺陷(P2,数据直接可见)
+
+open-questions 中出现:`_/assets/img/icon-delete.svg?inline` 未解析(`?inline` query 后缀未剥离——G-1 验收项曾要求剥离,未覆盖 import-resolver 路径);`@/components/rectification//merchantInspection/index.vue` 未解析(双斜杠未归一化)。**修复**:解析前剥离 `?query`/`#hash` 后缀、归一化重复斜杠。**验收**:这两条从 unresolved 队列消失并解析为真实 file 边。
+
+- [x] 完成:import resolver 在 alias/relative/heuristic 解析前统一标准化 target。验证:临时 fixture 中 `_/assets/img/icon-delete.svg?inline` 与 `@/components/rectification//merchantInspection/index.vue` 均进入 FactGraph imports 边,unresolved 队列为空。
+
+#### G-7 mock 目录路由污染 routes-to(P2)
+
+语义抽检失败样本全部来自 `src/mock/services/demo.js` 的路由被当作真实路由。**修复**:mock/fixture 目录(`src/mock/`、`__mocks__/`)的 route 事实默认不生成。**验收**:routes-to 抽检 passRate 回到 1.0,route-map 视图无 mock 路由。
+
+- [x] 完成:JS route-config 识别跳过 mock/fixture 目录。验证:临时 fixture 中 `src/mock/services/demo.js` 的 `/mock-only` 未进入 `codeMap.routes`,真实 `src/router/index.js` 的 `/real` 保留。
+
+#### G-8 open-questions.md 混排(P3)
+
+前 5 条高价值架构问题与 import-resolver 机械 backlog 混排。**修复**:按 raisedBy 分节(架构待确认 / 解析器待办 / explorer 遗留)。
+
 ---
 
 ## 非目标(本期不做)

@@ -1802,29 +1802,32 @@ function buildImportResolver(inventory) {
 }
 
 function resolveImportTarget(inventory, fromFile, target, resolver = buildImportResolver(inventory)) {
-  if (target.startsWith('.') || target.startsWith('/')) {
-    const resolved = resolveRelativeImport(resolver.paths, fromFile, target)
+  const normalizedTarget = normalizeImportTarget(target)
+  if (!normalizedTarget) return { unresolved: true, reason: 'empty import target' }
+
+  if (normalizedTarget.startsWith('.') || normalizedTarget.startsWith('/')) {
+    const resolved = resolveRelativeImport(resolver.paths, fromFile, normalizedTarget)
     if (resolved) {
       return resolvedFileNode(inventory, resolved)
     }
     return { unresolved: true, reason: 'relative import did not resolve to an inventory file' }
   }
 
-  const aliasBase = expandAliasTarget(target, resolver)
+  const aliasBase = expandAliasTarget(normalizedTarget, resolver)
   if (aliasBase) {
     const resolved = resolveBareImport(resolver.paths, aliasBase)
     if (resolved) return resolvedFileNode(inventory, resolved)
     return { unresolved: true, reason: `alias import ${target} expanded to ${aliasBase} but did not resolve` }
   }
 
-  const heuristicBase = expandInternalHeuristic(target, resolver)
+  const heuristicBase = expandInternalHeuristic(normalizedTarget, resolver)
   if (heuristicBase) {
     const resolved = resolveBareImport(resolver.paths, heuristicBase)
     if (resolved) return resolvedFileNode(inventory, resolved)
     return { unresolved: true, reason: `internal-looking import ${target} did not resolve` }
   }
 
-  const pkg = packageNameFromImport(target)
+  const pkg = packageNameFromImport(normalizedTarget)
   if (!pkg || pkg === '.' || pkg.startsWith('@/') || resolver.topDirs.has(pkg)) {
     return { unresolved: true, reason: `import target ${target} is not a valid external package` }
   }
@@ -1838,6 +1841,10 @@ function resolveImportTarget(inventory, fromFile, target, resolver = buildImport
       metadata: { importTarget: target },
     },
   }
+}
+
+function normalizeImportTarget(target) {
+  return normalizePath(String(target || '').split(/[?#]/)[0]).replace(/\/{2,}/g, '/')
 }
 
 function resolvedFileNode(inventory, resolved) {
