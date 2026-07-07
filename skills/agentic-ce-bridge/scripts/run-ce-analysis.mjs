@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { ingestAgentAnalyses } from '../../../shared/workspace-datasource/coding-pool.mjs'
 
 function usage() {
   console.error('Usage: node scripts/run-ce-analysis.mjs --datasource /path --pool coding --subject repo:name --task task-name [--message text] [--ce-cli path] [--window 1] [--model explore] [--timeout 300] [--dry-run]')
@@ -88,26 +89,23 @@ function parseJsonFromText(text) {
   throw new Error('No JSON object or array found in CE output')
 }
 
-function normalizeAnalyses(value, args, runId, rawRef) {
-  const records = Array.isArray(value) ? value : [value]
-  return records.map((record, index) => ({
-    id: record.id || `analysis:${args.subject}:${args.task}:${index}`,
-    subject: record.subject || subjectFromId(args.subject),
-    producedBy: 'subagent',
-    provider: 'repoprompt-ce',
-    promptRef: `raw/ce-runs/${runId}/request.json`,
-    evidenceRefs: Array.isArray(record.evidenceRefs) && record.evidenceRefs.length ? record.evidenceRefs : [rawRef],
-    claim: record.claim || 'CE analysis completed; inspect raw output for details.',
-    rationale: record.rationale || 'CE did not return a structured rationale. Raw output is preserved.',
-    confidence: ['low', 'medium', 'high'].includes(record.confidence) ? record.confidence : 'low',
-    createdAt: record.createdAt || new Date().toISOString(),
-  }))
-}
-
-function subjectFromId(id) {
-  if (id.startsWith('repo:')) return { type: 'repo', id }
-  if (id.startsWith('relationship:')) return { type: 'relationship', id }
-  return { type: 'workspace', id }
+function assertCeParsed(text, rawDir, runId) {
+  try {
+    return parseJsonFromText(text)
+  } catch (error) {
+    writeJson(path.join(rawDir, 'ce-run-failed.json'), {
+      schemaVersion: 'ce-run-failed/v1',
+      runId,
+      failedAt: new Date().toISOString(),
+      reason: `CE output parse failed: ${error.message}`,
+      rawRefs: [
+        `raw/ce-runs/${runId}/wait.stdout.txt`,
+        `raw/ce-runs/${runId}/wait.stderr.txt`,
+      ],
+    })
+    console.error(`CE output parse failed; raw output preserved at ${rawDir}`)
+    process.exit(2)
+  }
 }
 
 function main() {
@@ -115,7 +113,6 @@ function main() {
   const runId = `ce-${args.task}-${Date.now()}`
   const poolDir = path.join(args.datasource, 'pools', args.pool)
   const rawDir = path.join(poolDir, 'raw', 'ce-runs', runId)
-  const analysesFile = path.join(poolDir, 'analyses', `${runId}.json`)
   const prompt = args.message || [
     `Analyze ${args.subject} for ${args.task}.`,
     `Use the datasource pool at ${path.join(args.datasource, 'pools', args.pool)} as context if available.`,
@@ -166,14 +163,25 @@ function main() {
   if (wait.status !== 0) throw new Error(`CE agent_run wait failed with status ${wait.status}`)
 
   const rawRef = `evidence:raw:raw/ce-runs/${runId}/wait.stdout.txt`
-  let analyses
-  try {
-    analyses = normalizeAnalyses(parseJsonFromText(wait.stdout || wait.stderr || ''), args, runId, rawRef)
-  } catch {
-    analyses = normalizeAnalyses({}, args, runId, rawRef)
-  }
-  writeJson(analysesFile, analyses)
-  console.log(`Wrote ${analyses.length} CE analysis record(s) to ${analysesFile}`)
+  const parsed = assertCeParsed(wait.stdout || wait.stderr || '', rawDir, runId)
+  const result = ingestAgentAnalyses({
+    datasource: args.datasource,
+    pool: args.pool,
+    fileName: `${runId}.json`,
+    value: parsed,
+    defaults: {
+      subject: args.subject,
+      task: args.task,
+      producedBy: 'subagent',
+      provider: 'repoprompt-ce',
+      promptRef: `raw/ce-runs/${runId}/request.json`,
+      evidenceRefs: [rawRef],
+      claim: 'CE analysis completed; inspect raw output for details.',
+      rationale: 'CE did not return a structured rationale. Raw output is preserved.',
+      confidence: 'low',
+    },
+  })
+  console.log(`Wrote ${result.records.length} CE analysis record(s) to ${result.analysisPath}`)
 }
 
 main()

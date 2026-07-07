@@ -19,7 +19,12 @@
     "understanding:write-subagent": "node harnesses/repo-understanding/scripts/write-subagent-analysis.mjs",
     "understanding:validate": "node harnesses/repo-understanding/scripts/validate-understanding.mjs",
     "understanding:run": "node harnesses/repo-understanding/scripts/run-repo-understanding.mjs",
-    "understanding:harness": "node harnesses/repo-understanding/scripts/harness.mjs"
+    "understanding:harness": "node harnesses/repo-understanding/scripts/harness.mjs",
+    "understanding:human-html": "node skills/repo-human-readable/scripts/generate-html.mjs",
+    "eval:contract": "node evals/contract/run-contract.mjs",
+    "eval:behavioral": "node evals/run-all.mjs behavioral",
+    "eval:triggering": "node evals/run-all.mjs triggering",
+    "eval:all": "node evals/run-all.mjs all"
   },
   "engines": {
     "node": ">=20.0.0"

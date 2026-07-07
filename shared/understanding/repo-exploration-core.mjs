@@ -61,7 +61,7 @@ export function writeExplorationAnalysis(packageDir, value, provenance = {}) {
     gaps: normalizeArray(value.gaps),
     verdicts: normalizeArray(value.verdicts).map(normalizeVerifierVerdict).filter(Boolean),
   }
-  validateExplorerAnalysis(normalized)
+  validateExplorerAnalysis(normalized, inventory)
   normalized.producedBy.analysisOutputHash = hashText(JSON.stringify(normalized))
   const analysisPath = path.join(root, 'analyses', 'repo-exploration.json')
   writeJson(analysisPath, normalized)
@@ -240,7 +240,7 @@ function renderExplorationRequest({ inventory, codeMap, gapQueue, renderGraph, k
 
   return `# Repo Exploration Request
 
-You are a read-only repo explore agent, modeled after RepoPrompt CE's explore role.
+You are a read-only repository exploration agent restricted to non-destructive inspection.
 
 Your task is not to write the final architecture summary. Your task is to explore the repository actively, identify missing evidence that a static scan may overlook, and return structured exploration JSON. The important output is \`facts[]\`: evidence-backed triples that can be merged into \`fact-graph.json\`.
 
@@ -256,7 +256,7 @@ ${JSON.stringify(inventory.repo, null, 2)}
 - Do not run install, build, test, package, format, migration, server, or network commands.
 - Use read-only exploration only.
 - If your runtime provides shell tools, prefer \`rg\`, \`find\`, \`sed -n\`, \`nl -ba\`, \`git status --short\`, and \`git log --oneline -5\`.
-- If you are in RepoPrompt-style tools, use only \`get_file_tree\`, \`file_search\`, \`get_code_structure\`, \`read_file\`, and read-only \`git\`.
+- If your runtime exposes read-only code-navigation tools, prefer file-tree, file-search, code-structure, read-file, and read-only git; do not run install/build/test/servers.
 - Read \`AGENTS.md\` if present.
 
 ## Exploration Workflow
@@ -666,8 +666,11 @@ function normalizeVerifierVerdict(value) {
   }
 }
 
-function validateExplorerAnalysis(value) {
+function validateExplorerAnalysis(value, inventory = null) {
   const issues = []
+  const inventoryByPath = inventory
+    ? new Map((inventory.files || []).map(file => [normalizeRequestedPath(file.path, inventory.repo?.path || ''), file]))
+    : new Map()
   for (const [index, fact] of (value.facts || []).entries()) {
     if (!fact.subject) issues.push(`facts[${index}].subject is required`)
     if (!fact.object) issues.push(`facts[${index}].object is required`)
@@ -681,7 +684,34 @@ function validateExplorerAnalysis(value) {
       issues.push(`facts[${index}].evidence must contain at least one item`)
     }
     for (const [evidenceIndex, evidence] of (fact.evidence || []).entries()) {
-      if (!evidence.file) issues.push(`facts[${index}].evidence[${evidenceIndex}].file is required`)
+      if (!evidence.file) {
+        issues.push(`facts[${index}].evidence[${evidenceIndex}].file is required`)
+      } else if (inventoryByPath.size) {
+        const filePath = normalizeRequestedPath(evidence.file, inventory.repo?.path || '')
+        const meta = inventoryByPath.get(filePath)
+        if (!meta) {
+          issues.push(`facts[${index}].evidence[${evidenceIndex}].file is not in inventory: ${evidence.file}`)
+        } else {
+          const lineCount = Number(meta.lines || 0)
+          const startLine = evidence.line === undefined ? null : Number(evidence.line)
+          const endLine = evidence.endLine === undefined ? startLine : Number(evidence.endLine)
+          if (evidence.line !== undefined && (!Number.isInteger(startLine) || startLine < 1)) {
+            issues.push(`facts[${index}].evidence[${evidenceIndex}].line must be a positive integer`)
+          }
+          if (evidence.endLine !== undefined && (!Number.isInteger(endLine) || endLine < 1)) {
+            issues.push(`facts[${index}].evidence[${evidenceIndex}].endLine must be a positive integer`)
+          }
+          if (Number.isInteger(startLine) && Number.isInteger(endLine) && endLine < startLine) {
+            issues.push(`facts[${index}].evidence[${evidenceIndex}].endLine must be >= line`)
+          }
+          if (lineCount > 0 && Number.isInteger(startLine) && startLine > lineCount) {
+            issues.push(`facts[${index}].evidence[${evidenceIndex}].line exceeds file line count: ${evidence.file}:${startLine} > ${lineCount}`)
+          }
+          if (lineCount > 0 && Number.isInteger(endLine) && endLine > lineCount) {
+            issues.push(`facts[${index}].evidence[${evidenceIndex}].endLine exceeds file line count: ${evidence.file}:${endLine} > ${lineCount}`)
+          }
+        }
+      }
       if (evidence.snippet && String(evidence.snippet).split(/\r?\n/).length > 3) {
         issues.push(`facts[${index}].evidence[${evidenceIndex}].snippet must be <= 3 lines`)
       }

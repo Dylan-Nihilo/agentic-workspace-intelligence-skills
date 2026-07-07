@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repo Human Readable"
+  short_description: "Generate a readable HTML report from repo-understanding artifacts"
+  default_prompt: "Use $repo-human-readable to generate a self-contained HTML readable layer from an existing repo-understanding package."

@@ -1,0 +1,27 @@
+{
+  "statusSchemaVersion": "repo-harness-status/v1",
+  "dispatchSchemaVersion": "repo-explorer-dispatch/v1",
+  "ingestSchemaVersion": "repo-harness-ingest-result/v1",
+  "writeSubagentSchemaVersion": "repo-harness-write-subagent-result/v1",
+  "explorationAnalysisSchemaVersion": "repo-exploration-analysis/v1",
+  "adversarialVerificationSchemaVersion": "repo-adversarial-verification/v1",
+  "externalVerifiedTool": "deterministic-adversarial-verifier",
+  "nextActions": ["dispatch", "synthesize", "done"],
+  "explorerOutputRequired": [
+    "schemaVersion",
+    "strategy",
+    "facts",
+    "openQuestions",
+    "observations",
+    "requestedEvidence",
+    "gaps"
+  ],
+  "explorerEvidenceRequired": [
+    "file",
+    "line",
+    "endLine",
+    "snippet",
+    "tool",
+    "rawConfidence"
+  ]
+}

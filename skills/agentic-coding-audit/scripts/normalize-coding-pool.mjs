@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs'
 import path from 'node:path'
+import { validateAgentAnalyses } from '../../../shared/workspace-datasource/coding-pool.mjs'
 
 function usage() {
   console.error('Usage: node scripts/normalize-coding-pool.mjs (--pool /path/to/coding-pool | --datasource /path/to/datasource)')
@@ -64,26 +65,6 @@ function readAnalyses(pool) {
   return records
 }
 
-function validateAnalyses(records) {
-  const errors = []
-  records.forEach((record, index) => {
-    const label = record.id || `analysis[${index}]`
-    for (const field of ['id', 'subject', 'producedBy', 'evidenceRefs', 'claim', 'rationale', 'confidence', 'createdAt']) {
-      if (record[field] === undefined) errors.push(`${label}: missing ${field}`)
-    }
-    if (record.producedBy && !['codex', 'subagent', 'human'].includes(record.producedBy)) {
-      errors.push(`${label}: producedBy must be codex, subagent, or human`)
-    }
-    if (record.confidence && !['low', 'medium', 'high'].includes(record.confidence)) {
-      errors.push(`${label}: confidence must be low, medium, or high`)
-    }
-    if (!Array.isArray(record.evidenceRefs) || record.evidenceRefs.length === 0) {
-      errors.push(`${label}: evidenceRefs must be a non-empty array`)
-    }
-  })
-  return errors
-}
-
 function main() {
   const args = parseArgs(process.argv)
   const indexPath = path.join(args.pool, 'index.json')
@@ -97,7 +78,7 @@ function main() {
   const findings = readJson(path.join(args.pool, 'facts', 'findings.json'), [])
   const runs = readJson(path.join(args.pool, 'facts', 'runs.json'), [])
   const agentAnalyses = readAnalyses(args.pool)
-  const analysisErrors = validateAnalyses(agentAnalyses)
+  const analysisErrors = validateAgentAnalyses(agentAnalyses)
   if (analysisErrors.length) {
     console.error(analysisErrors.join('\n'))
     process.exit(2)

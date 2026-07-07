@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs'
 import path from 'node:path'
+import { validateAgentAnalyses } from '../../../shared/workspace-datasource/coding-pool.mjs'
 
 const EVALUATION_FRAMEWORK = [
   { id: 'architecture', name: 'Architecture contract', weight: 0.18 },
@@ -45,6 +46,54 @@ function readJson(file) {
 function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`)
+}
+
+function listJsonFiles(dir) {
+  if (!fs.existsSync(dir)) return []
+  return fs.readdirSync(dir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
+    .map(entry => path.join(dir, entry.name))
+    .sort()
+}
+
+function readAnalyses(pool) {
+  const records = []
+  for (const file of listJsonFiles(path.join(pool, 'analyses'))) {
+    const value = readJson(file)
+    if (Array.isArray(value)) records.push(...value)
+    else if (value) records.push(value)
+  }
+  return records
+}
+
+function failGate(message) {
+  const error = new Error(message)
+  error.exitCode = 2
+  throw error
+}
+
+function assertExportGate(args, pool) {
+  const errors = validateAgentAnalyses(readAnalyses(args.pool))
+  if (errors.length) failGate(`Audit export blocked by invalid analyses:\n${errors.join('\n')}`)
+
+  const poolPath = path.join(args.pool, 'facts', 'coding-pool.json')
+  const sourceFiles = [
+    ...listJsonFiles(path.join(args.pool, 'facts')).filter(file => path.basename(file) !== 'coding-pool.json'),
+    ...listJsonFiles(path.join(args.pool, 'analyses')),
+  ].filter(file => fs.existsSync(file))
+  const poolMtime = fs.statSync(poolPath).mtimeMs
+  const staleSources = sourceFiles.filter(file => fs.statSync(file).mtimeMs > poolMtime + 1)
+  if (staleSources.length) {
+    failGate([
+      'Audit export blocked by stale coding-pool.json. Run normalize-coding-pool.mjs first.',
+      ...staleSources.map(file => `- ${path.relative(args.pool, file)}`),
+    ].join('\n'))
+  }
+
+  const currentAnalyses = readAnalyses(args.pool)
+  if (JSON.stringify(currentAnalyses) !== JSON.stringify(pool.agentAnalyses || [])) {
+    failGate('Audit export blocked because analyses/ no longer matches facts/coding-pool.json. Run normalize-coding-pool.mjs first.')
+  }
 }
 
 function clamp(value) {
@@ -97,6 +146,7 @@ function main() {
     throw new Error(`Missing ${poolPath}. Run normalize-coding-pool.mjs first.`)
   }
   const pool = readJson(poolPath)
+  assertExportGate(args, pool)
   const findingsByRepo = new Map()
   for (const finding of pool.findings || []) {
     const id = finding.subject?.id
@@ -181,4 +231,9 @@ function main() {
   console.log(`Exported ${repos.length} repos and ${data.referenceEdges.length} edges to ${args.out}`)
 }
 
-main()
+try {
+  main()
+} catch (error) {
+  console.error(error.message)
+  process.exit(error.exitCode || 1)
+}

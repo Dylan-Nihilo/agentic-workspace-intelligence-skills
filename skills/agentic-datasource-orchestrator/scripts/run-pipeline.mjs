@@ -7,12 +7,12 @@ const __filename = fileURLToPath(import.meta.url)
 const repoRoot = path.resolve(path.dirname(__filename), '..', '..', '..')
 
 function usage() {
-  console.error('Usage: node scripts/run-pipeline.mjs --workspace /path --datasource /path [--max-files 8000] [--prepare-ce|--run-ce] [--ce-subject repo:name] [--ce-task task]')
+  console.error('Usage: node scripts/run-pipeline.mjs --workspace /path --datasource /path [--max-files 8000] [--prepare-ce|--run-ce --confirm-external] [--ce-subject repo:name] [--ce-task task]')
   process.exit(1)
 }
 
 function parseArgs(argv) {
-  const args = { maxFiles: 8000, prepareCe: false, runCe: false, ceSubject: '', ceTask: 'architecture-risk' }
+  const args = { maxFiles: 8000, prepareCe: false, runCe: false, confirmExternal: false, ceSubject: '', ceTask: 'architecture-risk' }
   for (let i = 2; i < argv.length; i += 1) {
     const key = argv[i]
     if (key === '--workspace') {
@@ -28,6 +28,8 @@ function parseArgs(argv) {
       args.prepareCe = true
     } else if (key === '--run-ce') {
       args.runCe = true
+    } else if (key === '--confirm-external') {
+      args.confirmExternal = true
     } else if (key === '--ce-subject') {
       args.ceSubject = argv[i + 1]
       i += 1
@@ -51,8 +53,18 @@ function run(script, args) {
   if (res.status !== 0) throw new Error(`${script} failed with status ${res.status}`)
 }
 
+function assertExternalExecutionConfirmed(args) {
+  if (!args.runCe) return
+  const token = process.env.AGENTIC_CONFIRM_EXTERNAL
+  if (!args.confirmExternal || token !== 'run-ce') {
+    console.error('External CE execution blocked. Use --run-ce --confirm-external with AGENTIC_CONFIRM_EXTERNAL=run-ce.')
+    process.exit(2)
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv)
+  assertExternalExecutionConfirmed(args)
   run('shared/scripts/init-datasource.mjs', ['--workspace', args.workspace, '--datasource', args.datasource])
   run('shared/scripts/update-stage.mjs', ['--datasource', args.datasource, '--stage', 'coding', '--status', 'running', '--produced-by', 'agentic-coding-audit'])
   run('skills/agentic-coding-audit/scripts/collect-static.mjs', ['--workspace', args.workspace, '--datasource', args.datasource, '--max-files', String(args.maxFiles)])

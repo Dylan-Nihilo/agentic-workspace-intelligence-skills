@@ -1,0 +1,21 @@
+{
+  "agentAnalyses": [
+    {
+      "id": "analysis:fixture:valid",
+      "subject": {
+        "type": "repo",
+        "id": "repo:mini-repo"
+      },
+      "producedBy": "subagent",
+      "provider": "fixture",
+      "promptRef": "raw/contract.txt",
+      "evidenceRefs": [
+        "evidence:raw:contract"
+      ],
+      "claim": "Fixture valid analysis",
+      "rationale": "Fixture rationale grounded in raw contract evidence.",
+      "confidence": "medium",
+      "createdAt": "2026-07-07T00:00:00.000Z"
+    }
+  ]
+}

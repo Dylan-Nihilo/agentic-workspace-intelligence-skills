@@ -631,7 +631,7 @@ function applyExternalVerifierVerdicts(builder, explorationAnalysis) {
     edge.metadata = {
       ...(edge.metadata || {}),
       verification: {
-        tool: item.tool || 'repo-fact-verifier',
+        tool: 'repo-fact-verifier',
         verdict,
         checkedAt: item.checkedAt || checkedAt,
         reason: item.reason,
@@ -670,7 +670,7 @@ function normalizeVerifierVerdictValues(values) {
         reason: String(item.reason),
         evidenceChecked: finiteNumber(item.evidenceChecked),
         checkedAt: item.checkedAt,
-        tool: item.tool || 'repo-fact-verifier',
+        tool: 'repo-fact-verifier',
       }
     })
     .filter(Boolean)
@@ -692,6 +692,7 @@ function runAdversarialVerifier(builder, inventory, options, externalReport = nu
   for (const [edgeId, edge] of edgeEntries) {
     if (!(edge.source !== 'static' || edge.confidence <= 0.7)) continue
     if (isExternalVerified(edge)) continue
+    removePriorVerifierVerdicts(report, edgeId)
     report.checkedEdges += 1
     const verdict = verifyEdgeEvidence(edge, builder.nodes, inventory, inventoryByPath)
     report.verdicts.push({ edgeId, ...verdict })
@@ -730,8 +731,20 @@ function runAdversarialVerifier(builder, inventory, options, externalReport = nu
   return report
 }
 
+function removePriorVerifierVerdicts(report, edgeId) {
+  const prior = report.verdicts.filter(item => item.edgeId === edgeId)
+  if (!prior.length) return
+  report.verdicts = report.verdicts.filter(item => item.edgeId !== edgeId)
+  report.checkedEdges = Math.max(0, report.checkedEdges - prior.length)
+  for (const item of prior) {
+    if (item.verdict === 'not-refuted') report.confirmedEdges = Math.max(0, report.confirmedEdges - 1)
+    else if (item.verdict === 'refuted') report.removedEdges = Math.max(0, report.removedEdges - 1)
+    else if (item.verdict === 'skipped') report.skippedEdges = Math.max(0, report.skippedEdges - 1)
+  }
+}
+
 function isExternalVerified(edge) {
-  return edge.metadata?.verification?.tool === 'repo-fact-verifier'
+  return edge.metadata?.verification?.tool === 'deterministic-adversarial-verifier'
 }
 
 function pruneDynamicOrphanNodes(builder) {

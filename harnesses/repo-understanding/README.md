@@ -3,6 +3,7 @@
 This harness turns one local repository into one evidence-backed FactGraph and projects that graph into three consumer surfaces:
 
 - human/wiki: `wiki/`
+- human/html: `human-readable.html`
 - mp micro rendering: `render-graph.json`
 - agent/RAG retrieval: `knowledge-index.jsonl`
 
@@ -26,6 +27,7 @@ The harness keeps Codex as the runtime for L2. It does not silently spawn agents
 npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/repo-name
 npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/repo-name --incremental --base HEAD
 npm run understanding:harness -- project --package outputs/code-understanding/repo-name --only all
+npm run understanding:harness -- html --package outputs/code-understanding/repo-name
 npm run understanding:harness -- verify --package outputs/code-understanding/repo-name
 npm run understanding:harness -- serve --package outputs/code-understanding/repo-name --port 8787
 ```
@@ -57,6 +59,7 @@ out/<repo>/
   render-graph.json
   knowledge-index.json
   knowledge-index.jsonl
+  human-readable.html
   wiki/
   static/
     inventory.json

@@ -1,70 +1,51 @@
 ---
 name: agentic-coding-audit
-description: Fill the coding pool inside a progressive workspace datasource for multi-repository software workspaces, especially micro-frontend systems. Use when Codex must collect static code evidence, run or incorporate deterministic tooling results, preserve Codex or agent analyses with evidence references, or export audit-data-compatible JSON from datasource/pools/coding.
+version: 1.0.0
+lastValidated: 2026-07-07
+description: Fill the coding pool (datasource/pools/coding) with DETERMINISTIC static code evidence and agent analyses that carry evidence references, then export audit-data-compatible JSON. Use to populate the coding pool of a multi-repository workspace datasource including micro-frontend systems — this writes a datasource pool, not a fact-graph (for single-repo fact-graphs use repo-understanding). Invoked by agentic-datasource-orchestrator. Keywords - coding pool, 静态代码证据, deterministic tooling, evidenceRefs, audit-data 导出.
 ---
 
 # Agentic Coding Audit Skill
 
-## Purpose
+输入是本地软件 workspace 或已有 datasource;产出是 `datasource/pools/coding` 中的 raw evidence、deterministic facts、agent analyses 和兼容性 export。
 
-Use this skill to fill `datasource/pools/coding` for a local software workspace. The pool separates deterministic code evidence from Codex or agent analysis, then optionally exports a view-model compatible with an existing audit board.
+## 红线(HARD-GATE)
 
-Keep documentation/wiki knowledge pools separate. This skill owns coding evidence, coding facts, coding analyses, and coding exports only.
+1. [HARD-GATE: validateAgentAnalyses] `analyses/` 记录必须带 `evidenceRefs`、`producedBy`、`rationale`、`confidence` 等字段,否则 normalizer 拒绝。
+2. [HARD-GATE: assertExportGate] export 前会重跑 analyses schema 与 freshness 检查;`coding-pool.json` 落后于 facts/analyses 时拒绝导出。
 
-## Workflow
+## 约束(PRINCIPLE)
 
-1. Identify the workspace root and datasource directory.
-2. Read `references/coding-data-pool-schema.md` before changing or creating a data pool.
-3. Run `scripts/collect-static.mjs --datasource <datasource>` or equivalent local commands to collect deterministic evidence.
-4. Add Codex or agent analysis only under `analyses/`, with `evidenceRefs`, `producedBy`, `rationale`, and `confidence`.
-5. Run `scripts/normalize-coding-pool.mjs --datasource <datasource>` to build a consolidated pool file and catch schema problems.
-6. If a board or report needs the legacy shape, read `references/output-compatibility.md`, then run `scripts/export-audit-data.mjs`.
+1. coding pool 是 coding 数据源;文档/wiki/runtime/security/business 等池不要混进来。
+2. `raw/` 是 append-only evidence;不要为了让分析更好看而改 raw。
+3. `facts/` 是确定性归一化结果;`analyses/` 是带证据引用的判断,不是事实。
+4. 每个非显然 claim 至少引用一个 `evidenceRef`;缺证据时标 missing。
+5. 不要声称未测量的 runtime、CI、SCA、monitoring、traffic 或 business metrics 存在。
+6. 数据池 schema 见 `references/coding-data-pool-schema.md`;证据分类见 `references/evidence-taxonomy.md`;兼容 export 见 `references/output-compatibility.md`。
 
-## Evidence Rules
+## 流程
 
-- Treat `raw/` as immutable evidence. Do not edit raw evidence to make later analysis look cleaner.
-- Treat `facts/` as deterministic normalization from raw evidence and tool output.
-- Treat `analyses/` as human, Codex, or subagent judgment. Agent claims are not facts.
-- Every non-obvious claim must cite at least one `evidenceRef`.
-- Mark missing evidence as missing. Do not invent runtime, CI, SCA, monitoring, traffic, or business metrics.
-- Prefer preserving existing useful output fields, but move provenance and agent reasoning upstream into the pool.
-
-Read `references/evidence-taxonomy.md` when deciding whether something belongs in `raw/`, `facts/`, or `analyses/`.
-
-## Script Usage
-
-Collect static evidence:
+1. 确定 workspace root 和 datasource/pool 目录。
+2. 读取 `references/coding-data-pool-schema.md`。
+3. 收集静态证据:
 
 ```bash
-node scripts/collect-static.mjs --workspace /path/to/workspace --out /path/to/coding-pool
-node scripts/collect-static.mjs --workspace /path/to/workspace --datasource /path/to/datasource
+node scripts/collect-static.mjs --workspace <workspace> --datasource <datasource>
 ```
 
-Normalize the pool:
+4. 只在 `analyses/` 下添加人工或 agent 判断,并携带 evidenceRefs、rationale 与 confidence。
+5. 归一化并校验:
 
 ```bash
-node scripts/normalize-coding-pool.mjs --pool /path/to/coding-pool
-node scripts/normalize-coding-pool.mjs --datasource /path/to/datasource
+node scripts/normalize-coding-pool.mjs --datasource <datasource>
 ```
 
-Export audit-board-compatible JSON:
+6. 如需 legacy board/report shape,先读 `references/output-compatibility.md`,再导出:
 
 ```bash
-node scripts/export-audit-data.mjs --pool /path/to/coding-pool --out /path/to/audit-data.json
-node scripts/export-audit-data.mjs --datasource /path/to/datasource
+node scripts/export-audit-data.mjs --datasource <datasource>
 ```
 
-## Output Contract
+## 返回给编排者
 
-Use the coding pool as the source of truth for coding data:
-
-```text
-datasource/pools/coding/
-├── raw/
-├── facts/
-├── analyses/
-├── exports/
-└── index.json
-```
-
-The compatibility export may keep legacy fields such as `repos`, `referenceEdges`, `eslintRun`, `dimensionScores`, `score`, `grade`, and `risk`. It must not become the only source of truth.
+返回 coding pool 路径、normalizer 结果、repositories/relationships/findings/agentAnalyses 计数、export 路径和缺失证据列表。

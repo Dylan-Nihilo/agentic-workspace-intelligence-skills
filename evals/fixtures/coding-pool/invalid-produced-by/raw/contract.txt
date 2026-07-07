@@ -1,0 +1,1 @@
+Fixture raw evidence for an invalid producedBy enum record.

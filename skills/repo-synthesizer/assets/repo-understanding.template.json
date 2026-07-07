@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "repo-understanding-analysis/v1",
+  "confidence": "medium",
+  "summary": "",
+  "architecture": {
+    "style": "",
+    "layers": [],
+    "components": [
+      {
+        "name": "",
+        "role": "",
+        "keyFiles": [],
+        "evidenceRefs": []
+      }
+    ],
+    "boundaries": [],
+    "connections": []
+  },
+  "modules": [
+    {
+      "name": "",
+      "purpose": "",
+      "keyFiles": [],
+      "evidenceRefs": []
+    }
+  ],
+  "keyFlows": [
+    {
+      "name": "",
+      "steps": [
+        {
+          "description": "",
+          "evidenceRefs": []
+        }
+      ],
+      "evidenceRefs": []
+    }
+  ],
+  "risks": [
+    {
+      "title": "",
+      "severity": "medium",
+      "rationale": "",
+      "evidenceRefs": []
+    }
+  ],
+  "openQuestions": [],
+  "evidenceRefs": []
+}

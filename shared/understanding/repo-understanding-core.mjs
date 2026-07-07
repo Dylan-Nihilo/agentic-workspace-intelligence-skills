@@ -485,6 +485,7 @@ export function writeAnalysis(packageDir, value, provenance = {}) {
     analysisInputHash: provenance.analysisInputHash || hashText(JSON.stringify(value)),
   }
   const normalized = normalizeAnalysis(value, inventory.repo, enrichedProvenance)
+  validateAnalysisBeforeWrite(root, normalized, inventory)
   const analysisPath = path.join(root, 'analyses', 'repo-understanding.json')
   normalized.producedBy.analysisOutputHash = hashText(JSON.stringify(normalized))
   writeJson(analysisPath, normalized)
@@ -502,6 +503,35 @@ export function writeAnalysis(packageDir, value, provenance = {}) {
     projectHarnessPackage(root, { only: 'wiki' })
   }
   return { analysisPath, analysis: normalized }
+}
+
+function validateAnalysisBeforeWrite(root, analysis, inventory) {
+  const issues = []
+  const knowledgeIndex = readJson(path.join(root, 'static', 'knowledge-index.json'))
+  const validEvidenceRefs = new Set((knowledgeIndex.evidenceRefs || []).map(item => item.id))
+  const inventoryPaths = new Set((inventory.files || []).map(file => file.path))
+
+  if (analysis.schemaVersion !== SCHEMA.analysis) issues.push('Analysis schemaVersion is invalid')
+  if (!analysis.summary || analysis.summary.length < 120) issues.push('Analysis summary must be at least 120 characters before write')
+  if (!analysis.architecture?.layers?.length) issues.push('Analysis must include at least one architecture layer before write')
+  if (!analysis.modules?.length) issues.push('Analysis must include at least one module before write')
+  if (!Array.isArray(analysis.keyFlows) || analysis.keyFlows.length < 2 || analysis.keyFlows.length > 5) {
+    issues.push('Analysis keyFlows must contain 2-5 flows before write')
+  }
+  if (!analysis.evidenceRefs?.length) issues.push('Analysis must include top-level evidenceRefs before write')
+
+  const missingRefs = collectEvidenceRefs(analysis).filter(ref => !validEvidenceRefs.has(ref))
+  if (missingRefs.length) {
+    issues.push(`Analysis references ${missingRefs.length} unknown evidenceRefs before write: ${missingRefs.slice(0, 8).join(', ')}`)
+  }
+  const missingKeyFiles = collectKeyFiles(analysis).filter(file => !inventoryPaths.has(file))
+  if (missingKeyFiles.length) {
+    issues.push(`Analysis references ${missingKeyFiles.length} unknown keyFiles before write: ${missingKeyFiles.slice(0, 8).join(', ')}`)
+  }
+
+  if (issues.length) {
+    throw new Error(`Analysis prewrite validation failed:\n- ${issues.join('\n- ')}`)
+  }
 }
 
 export function validateUnderstandingPackage(packageDir) {

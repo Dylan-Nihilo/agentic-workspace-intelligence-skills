@@ -1,62 +1,52 @@
 ---
 name: agentic-datasource-orchestrator
-description: Coordinate a family of lightweight skills that progressively fill a complete workspace datasource. Use when Codex must initialize datasource manifests, run coding and CE bridge stages in order, track stage completeness and missing evidence, merge pools into exports/workspace-datasource.json, or plan later docs, runtime, delivery, security, and business analysis stages.
+version: 1.0.0
+lastValidated: 2026-07-07
+description: Coordinate producer skills that progressively fill a MULTI-REPOSITORY workspace datasource, then merge their pools into exports/workspace-datasource.json. Use when you need to run coding/CE producer stages in order, track stage completeness and missing evidence, and assemble the workspace datasource — NOT to build a single-repo fact-graph/wiki (use repo-understanding). Keywords - workspace datasource, pool 合并, 多仓协调, stage 完整度, exports/workspace-datasource.json.
 ---
 
 # Agentic Datasource Orchestrator
 
-## Purpose
+输入是一个多仓 workspace 和 datasource 目录;产出是分阶段填充的 datasource pools 以及 `exports/workspace-datasource.json`。它只协调 producer skills,不直接拥有领域分析。
 
-Use this skill as the top-level coordinator for progressive datasource builds. It does not own domain analysis; it runs producer skills and merges their pool outputs.
+## 红线(HARD-GATE)
 
-## Skill Family
+1. [HARD-GATE: assertExternalExecutionConfirmed] 外部 agent runtime 执行必须同时提供 `--run-ce --confirm-external` 和 `AGENTIC_CONFIRM_EXTERNAL=run-ce`;默认只 prepare。
 
-- `agentic-coding-audit`: fills `pools/coding` with static code facts, findings, and audit-board exports.
-- `agentic-ce-bridge`: uses RepoPrompt CE CLI/MCP as the first external agent runtime and writes CE conclusions into `analyses/`.
-- Future skills should fill `pools/docs`, `pools/runtime`, `pools/delivery`, `pools/security`, and `pools/business`.
+## 约束(PRINCIPLE)
 
-## Workflow
+1. 最终 datasource 是 assembled,不是直接手改。producer 只写自己的 pool,orchestrator 更新状态并构建 export。
+2. 每个 producer stage 的缺失证据要显式记录,不要把 incomplete 当 failure 或 success。
+3. 不要把未验证的 producer 输出描述成已通过 datasource 总闸门;以各 producer gate 为准,coding 走 normalize/export gate,CE 走 shared ingest gate。
+4. repo 单仓 fact-graph/wiki 工作应交给 `repo-understanding`,不要用 workspace datasource 代替。
+5. 阶段契约见 `references/pipeline-contract.md`。
 
-1. Read `../../shared/references/workspace-datasource-schema.md`.
-2. Initialize the datasource manifest with `../../shared/scripts/init-datasource.mjs`.
-3. Run producer skills in stages. Each stage writes only its pool.
-4. Update `manifest.json` after each stage with `../../shared/scripts/update-stage.mjs`.
-5. Build `exports/workspace-datasource.json` with `../../shared/scripts/build-workspace-datasource.mjs`.
-6. Treat incomplete stages as explicit missing evidence, not failure.
+## 流程
 
-## Quick Pipeline
-
-Run a static coding pipeline:
+1. 读取 `../../shared/references/workspace-datasource-schema.md` 与 `references/pipeline-contract.md`。
+2. 初始化 datasource manifest:
 
 ```bash
-node scripts/run-pipeline.mjs \
-  --workspace /path/to/workspace \
-  --datasource /path/to/datasource \
-  --max-files 8000
+node ../../shared/scripts/init-datasource.mjs --workspace <workspace> --datasource <datasource>
 ```
 
-Prepare a CE analysis request without executing CE:
+3. 运行 producer stages。常规 coding pipeline 使用:
 
 ```bash
-node scripts/run-pipeline.mjs \
-  --workspace /path/to/workspace \
-  --datasource /path/to/datasource \
-  --prepare-ce \
-  --ce-subject repo:mp-galaxy \
-  --ce-task architecture-risk
+node scripts/run-pipeline.mjs --workspace <workspace> --datasource <datasource> --max-files <n>
 ```
 
-Run CE only when explicitly intended:
+4. 若只准备外部分析请求,加 `--prepare-ce`;真正执行外部 runtime 需:
 
 ```bash
-node scripts/run-pipeline.mjs \
-  --workspace /path/to/workspace \
-  --datasource /path/to/datasource \
-  --run-ce \
-  --ce-subject repo:mp-galaxy \
-  --ce-task architecture-risk
+AGENTIC_CONFIRM_EXTERNAL=run-ce node scripts/run-pipeline.mjs --workspace <workspace> --datasource <datasource> --run-ce --confirm-external --ce-subject <repo:id>
+```
+5. 每个 stage 结束后更新 manifest,再构建 `exports/workspace-datasource.json`:
+
+```bash
+node ../../shared/scripts/build-workspace-datasource.mjs --datasource <datasource>
 ```
 
-## Design Rule
+## 返回给编排者
 
-The final datasource is assembled, not directly edited. Producers write pool data; the orchestrator updates status and builds exports.
+返回 datasource 路径、已完成 stage、缺失证据列表、生成的 `exports/workspace-datasource.json` 路径,以及是否触发过外部执行。

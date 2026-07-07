@@ -1,0 +1,1 @@
+Fixture raw evidence for a valid AgentAnalysis record.

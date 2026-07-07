@@ -27,7 +27,7 @@ Each fact, finding, relationship, or agent analysis should carry `evidenceRefs`.
 
 ## Agent Participation
 
-Codex or subagents participate in static analysis by reading deterministic facts and writing `AgentAnalysis` records. They may:
+Analysis producers with `producedBy` values of `codex`, `subagent`, or `human` participate by reading deterministic facts and writing `AgentAnalysis` records. They may:
 
 - classify business/domain intent from repo names, routes, and code context
 - explain architecture risk from relationships and source references

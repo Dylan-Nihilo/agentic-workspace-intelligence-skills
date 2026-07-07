@@ -15,6 +15,7 @@ import {
 } from '../../../shared/understanding/repo-understanding-core.mjs'
 import { writeExplorationAnalysis } from '../../../shared/understanding/repo-exploration-core.mjs'
 import { projectHarnessPackage } from '../../../shared/understanding/fact-graph-harness.mjs'
+import { generateHumanReadableHtml } from '../../../shared/understanding/human-readable-html.mjs'
 
 function usage() {
   console.error(`Usage:
@@ -22,11 +23,12 @@ function usage() {
   harness project --package /path/to/package [--only render-graph|knowledge-index|wiki|all]
   harness status --package /path/to/package
   harness dispatch --package /path/to/package [--max-tasks 40] [--explorers a,b,c]
-  harness ingest --package /path/to/package --analysis /path/to/output.json [--explorer name] [--round n]
+  harness ingest --package /path/to/package (--analysis /path/to/output.json | --open-question text [--tasks id1,id2]) [--explorer name] [--round n]
   harness explore --package /path/to/package [--runner codex] [--max-tasks 40] [--rounds 2] [--until-coverage [threshold]]
   harness request --package /path/to/package
   harness write-subagent --package /path/to/package --analysis /path/to/analysis.json
   harness report --package /path/to/package [--out /path/to/report.md]
+  harness html --package /path/to/package [--out /path/to/human-readable.html]
   harness verify --package /path/to/package
   harness serve --package /path/to/package [--port 8787]`)
   process.exit(1)
@@ -53,6 +55,7 @@ function main() {
   if (command === 'request') return request(argv)
   if (command === 'write-subagent') return writeSubagent(argv)
   if (command === 'report') return report(argv)
+  if (command === 'html') return html(argv)
   if (command === 'verify') return verify(argv)
   if (command === 'serve') return serve(argv)
   usage()
@@ -122,12 +125,15 @@ function dispatch(argv) {
 }
 
 function ingest(argv) {
-  const args = parseArgs(argv, ['package', 'analysis'])
+  const args = parseArgs(argv, ['package'])
   const packageDir = path.resolve(args.package)
+  if (!args.analysis && !args['open-question']) usage()
   try {
-    const value = readAnalysisInput(args.analysis)
+    const value = args['open-question']
+      ? openQuestionAnalysis(packageDir, args['open-question'], args.tasks)
+      : readAnalysisInput(args.analysis)
     const result = ingestAnalysisValue(packageDir, value, {
-      analysisPath: args.analysis === '-' ? undefined : path.resolve(args.analysis),
+      analysisPath: !args.analysis || args.analysis === '-' ? undefined : path.resolve(args.analysis),
       explorer: args.explorer || value.explorer || value.producedBy?.role,
       round: args.round ? Number(args.round) : undefined,
       runtime: args.runtime || value.producedBy?.runtime || 'agent-runtime',
@@ -185,6 +191,15 @@ function report(argv) {
   const markdown = renderHarnessReport(packageDir, validation)
   fs.writeFileSync(outFile, `${markdown.trimEnd()}\n`, 'utf8')
   console.log(`Report: ${outFile}`)
+}
+
+function html(argv) {
+  const args = parseArgs(argv, ['package'])
+  const result = generateHumanReadableHtml({
+    packageDir: path.resolve(args.package),
+    outFile: args.out ? path.resolve(args.out) : undefined,
+  })
+  console.log(JSON.stringify(result, null, 2))
 }
 
 function explore(argv) {
@@ -419,10 +434,34 @@ function createDispatchRound(packageDir, options = {}) {
 }
 
 function ingestAnalysisValue(packageDir, value, provenance = {}) {
-  if (isVerificationOutput(value, provenance.explorer)) {
-    return ingestVerificationAnalysis(packageDir, value, provenance)
+  return withPackageWriteLock(packageDir, () => {
+    if (isVerificationOutput(value, provenance.explorer)) {
+      return ingestVerificationAnalysis(packageDir, value, provenance)
+    }
+    return ingestExplorationAnalysis(packageDir, value, provenance)
+  })
+}
+
+function withPackageWriteLock(packageDir, callback) {
+  const root = path.resolve(packageDir)
+  const lockPath = path.join(root, '.repo-understanding-ingest.lock')
+  let fd
+  try {
+    fd = fs.openSync(lockPath, 'wx')
+    fs.writeFileSync(fd, JSON.stringify({
+      pid: process.pid,
+      createdAt: new Date().toISOString(),
+    }))
+    return callback()
+  } catch (err) {
+    if (err?.code === 'EEXIST') throw new Error(`Package ingest write lock exists: ${lockPath}`)
+    throw err
+  } finally {
+    if (fd !== undefined) {
+      fs.closeSync(fd)
+      fs.rmSync(lockPath, { force: true })
+    }
   }
-  return ingestExplorationAnalysis(packageDir, value, provenance)
 }
 
 function ingestExplorationAnalysis(packageDir, value, provenance = {}) {
@@ -1357,6 +1396,30 @@ function parseUntilCoverage(value, fallbackThreshold) {
   const threshold = Number(value)
   if (!Number.isFinite(threshold)) usage()
   return threshold
+}
+
+function openQuestionAnalysis(packageDir, text, taskIdsValue) {
+  const inventory = readJson(path.join(packageDir, 'static', 'inventory.json'))
+  const question = String(text || '').trim()
+  if (!question) throw new Error('--open-question must not be empty')
+  const relatedNodes = String(taskIdsValue || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+  return {
+    schemaVersion: 'repo-exploration-analysis/v1',
+    repo: inventory.repo,
+    strategy: 'open-question ingest primitive',
+    facts: [],
+    openQuestions: [{
+      question,
+      relatedNodes,
+      raisedBy: 'harness-open-question',
+    }],
+    observations: [],
+    requestedEvidence: { files: [], searches: [] },
+    gaps: [],
+  }
 }
 
 function emptyExplorationAnalysis(repo) {

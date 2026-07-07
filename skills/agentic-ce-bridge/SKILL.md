@@ -1,48 +1,46 @@
 ---
 name: agentic-ce-bridge
-description: Use RepoPrompt CE CLI or MCP as the first agent runtime for workspace datasource analysis. Use when Codex must call CE agent_run, capture CE raw output, convert CE conclusions into datasource pool analyses, or bridge CE-produced codebase understanding into analyses/*.json before later replacing CE with a native implementation.
+version: 1.0.0
+lastValidated: 2026-07-07
+description: Run an EXTERNAL agent runtime over a workspace datasource, capture its raw run output, and convert its conclusions into pool analyses/*.json with evidence references. Use to bridge an external code-understanding agent into a datasource pool — this produces external-subagent analyses (for deterministic static evidence use agentic-coding-audit). Invoked by agentic-datasource-orchestrator. Keywords - external agent runtime, CE bridge, raw run 捕获, pool analyses, subagent analysis.
 ---
 
 # Agentic CE Bridge
 
-## Purpose
+输入是已有 workspace datasource 和目标 pool;产出是保留 raw run 的外部 agent analysis,写入 `pools/<pool>/analyses/*.json`。
 
-Use this skill to run RepoPrompt CE as an external agent runtime and write its output into an existing datasource pool. CE output is agent analysis, not deterministic fact.
+## 红线(HARD-GATE)
 
-## Workflow
+1. [HARD-GATE: ingestAgentAnalyses] 写入 `pools/<pool>/analyses/*.json` 必须走 shared datasource ingest 原语,并通过 schema/证据 gate。
+2. [HARD-GATE: assertCeParsed] CE 输出 parse 失败时只保留 raw 与 `ce-run-failed.json`,不得合成伪 analysis,并以非零退出。
 
-1. Read `references/ce-cli-contract.md`.
-2. Detect the CE CLI with `scripts/detect-ce-cli.mjs`.
-3. Ensure the target datasource exists and the target pool has facts.
-4. Run CE with `scripts/run-ce-analysis.mjs`, or manually call CE MCP/CLI and save the raw run under `pools/<pool>/raw/ce-runs/`.
-5. Write parsed CE conclusions into `pools/<pool>/analyses/*.json` as `AgentAnalysis` records.
-6. Re-run the producing pool normalizer, such as `agentic-coding-audit/scripts/normalize-coding-pool.mjs`.
+## 约束(PRINCIPLE)
 
-## Boundaries
+1. 外部 agent output 是 analysis,不是 raw fact;不能覆盖 `raw/` 或 `facts/`。
+2. 外部 agent 输出不是 deterministic facts;只能作为带证据引用的 `agentAnalyses`。
+3. 外部 runtime 结果必须保留 raw;parse 失败只上报失败标记。
+4. 默认 prepare/dry-run;只有明确授权时才真正执行外部 runtime。
+5. CLI 与 raw output 契约见 `references/ce-cli-contract.md`。
 
-- Use CE for semantic analysis, architecture explanation, risk interpretation, and context exploration.
-- Do not use CE output as raw facts unless CE is only relaying deterministic tool output.
-- Do not overwrite `raw/` or `facts/` based on a CE conclusion.
-- If CE cannot produce strict JSON, preserve the raw output and create a low-confidence analysis that points to the raw run.
+## 流程
 
-## Commands
-
-Detect CE:
+1. 读取 `references/ce-cli-contract.md`。
+2. 检测本地外部 agent CLI:
 
 ```bash
 node scripts/detect-ce-cli.mjs
 ```
 
-Prepare or run CE analysis:
+3. 确认 datasource 存在且目标 pool 已有 facts。
+4. 默认只准备请求:
 
 ```bash
-node scripts/run-ce-analysis.mjs \
-  --datasource /path/to/datasource \
-  --pool coding \
-  --subject repo:mp-galaxy \
-  --task architecture-risk \
-  --message "Analyze this repository using the coding pool facts." \
-  --dry-run
+node scripts/run-ce-analysis.mjs --datasource <datasource> --pool <pool> --subject <subject> --task <task> --message <message> --dry-run
 ```
 
-Remove `--dry-run` only when CE is running and agent execution is intended.
+5. 去掉 `--dry-run` 只在外部执行被明确授权时使用。
+6. 执行后保存 raw run,把可解析结论写入 `pools/<pool>/analyses/*.json`,再运行对应 producer normalizer;parse 失败时查看 raw run 下的 `ce-run-failed.json`。
+
+## 返回给编排者
+
+返回 raw run 目录、analysis 文件路径、normalizer 结果、parse 是否成功、是否执行了外部 runtime,以及任何缺失证据。
