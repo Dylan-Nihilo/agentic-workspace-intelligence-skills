@@ -474,6 +474,8 @@ export function normalizeAnalysis(value, repo, provenance = {}) {
     risks: Array.isArray(value.risks) ? value.risks : [],
     openQuestions: Array.isArray(value.openQuestions) ? value.openQuestions : [],
     evidenceRefs: Array.isArray(value.evidenceRefs) ? value.evidenceRefs : [],
+    // agent authored 的业务解读层：按业务(而非 router 文件)划分的域，供人读投影读取
+    businessDomains: Array.isArray(value.businessDomains) ? value.businessDomains : [],
   }
 }
 
@@ -1952,6 +1954,7 @@ function buildUnderstandingRequest({ repo, inventory, codeMap, factGraph = null,
     keyFlows: [{ name: 'Flow name', steps: ['Step 1', 'Step 2'], evidenceRefs: ['evidence:file:path'] }],
     risks: [{ title: 'Risk or uncertainty', severity: 'low|medium|high', rationale: 'Evidence-backed rationale', evidenceRefs: ['evidence:file:path'] }],
     openQuestions: ['Questions that need runtime, docs, or owner knowledge.'],
+    businessDomains: [{ name: "Business domain name in the reader's language, grouped by BUSINESS FUNCTION not by router/source file", description: 'One sentence on what this domain does for the business', prefixes: ['top-level route path segment that belongs to this domain, e.g. invoice, bank, tax'] }],
     evidenceRefs: ['evidence:manifest:path', 'evidence:file:path'],
   }
   const explorationSections = []
@@ -2091,6 +2094,7 @@ Rules:
 - Infer the technology stack from manifests and file patterns, but do not assume unavailable runtime behavior.
 - If Agent Exploration sections are present, use them to strengthen runtime/request-pipeline/configuration claims, but keep claims evidence-backed and do not treat agent observations as deterministic facts without cited files.
 - Prefer concise, specific module and flow descriptions over broad generic summaries.
+- \`businessDomains\`: this is the human-facing business taxonomy that the readable projection renders. Author it in the reader's language and group routes by BUSINESS FUNCTION, not by router/source file. Read every \`route\` node in the FactGraph (and its \`routes-to\` evidence comments), infer each route's business area, and assign its top-level path segment to a domain \`prefixes\` list. Split a grab-bag router file across multiple domains when its routes serve different businesses (e.g. bank, payroll, bookkeeping routes must not sit under an "invoice" domain). Every top-level route segment should belong to exactly one domain; use a small "general/other" domain for entry and utility routes.
 - Return JSON only.
 `
 }

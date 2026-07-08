@@ -13,7 +13,9 @@ description: Orchestrate end-to-end understanding of a SINGLE repository into an
 
 # Repo Understanding(编排 skill)
 
-把一个代码仓库转成带证据的结构化知识资产:fact-graph、render-graph、knowledge-index、wiki 和 report。你是编排者,只通过 harness CLI 原语驱动流程,不直接产出事实,也不手改任何 package 产物。
+把一个代码仓库转成带证据的结构化知识资产,并**闭环到给人看的呈现**:fact-graph、render-graph、knowledge-index、wiki、report,以及一张自包含的 human-readable HTML 页面。你是编排者,只通过 harness CLI 原语驱动流程,不直接产出事实,也不手改任何 package 产物。
+
+**闭环原则(ADK 式)**:LLM 判断只在叶子节点出现——探索(L2)产出带证据的事实、综合(L4)产出业务解读(含 `businessDomains`);编排、验证、渲染全是确定性 CLI。流程**必须走到人可消费的 HTML**,不能停在"落一堆数据没人消费"。
 
 ## 红线(HARD-GATE)
 
@@ -60,8 +62,14 @@ npm run --silent understanding:harness -- status --package <package-dir>
 ```bash
 npm run --silent understanding:harness -- ingest --package <package-dir> --open-question "<question>" --tasks "<task-id>,<node-id>"
 ```
-5. 最终综合:按 `repo-synthesizer` skill 写入 `analyses/repo-understanding.json`。
-6. 报告与复核:
+5. 最终综合(L4):按 `repo-synthesizer` skill 写入 `analyses/repo-understanding.json`。综合**必须包含 `businessDomains`**(按业务而非 router 文件分组的域),它是人读页面的业务分类来源。
+6. 呈现(闭环收尾,确定性渲染):综合写回后,渲染人可消费的 HTML 页面。它是消费投影,确定性读取 fact-graph 与综合结果,不做 LLM 即兴生成。**这一步不可跳过——流程必须闭环到人能打开的页面。**
+
+```bash
+npm run --silent understanding:harness -- html --package <package-dir>
+```
+
+7. 报告与复核:
 
 ```bash
 npm run --silent understanding:harness -- report --package <package-dir>
@@ -70,4 +78,4 @@ npm run --silent understanding:harness -- verify --package <package-dir>
 
 ## 返回给编排者
 
-交付 report 路径、package 路径、nodes/edges/coverage、动态边数、verifier 拦截数、validation 结果和是否写入最终综合。指标必须来自命令输出或 package 产物,不得美化。
+**首要交付 human-readable HTML 页面路径**(`<package-dir>/human-readable.html`,人直接打开的东西),外加 report 路径、package 路径、nodes/edges/coverage、动态边数、verifier 拦截数、validation 结果、是否写入最终综合与 businessDomains 数量。指标必须来自命令输出或 package 产物,不得美化。

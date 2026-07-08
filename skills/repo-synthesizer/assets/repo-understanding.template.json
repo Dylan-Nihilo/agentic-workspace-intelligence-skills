@@ -45,5 +45,12 @@
     }
   ],
   "openQuestions": [],
+  "businessDomains": [
+    {
+      "name": "业务域名称（读者语言，按业务功能分组，非 router 文件）",
+      "description": "一句话说明该域的业务作用",
+      "prefixes": ["属于该域的顶层路由路径段，如 invoice、bank、tax"]
+    }
+  ],
   "evidenceRefs": []
 }

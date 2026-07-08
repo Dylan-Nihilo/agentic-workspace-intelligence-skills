@@ -764,7 +764,7 @@ function normalizeRegistryGolden(value) {
   if (!value || typeof value !== 'object') return value
   const output = {}
   for (const key of Object.keys(value).sort()) {
-    if (['generatedAt', 'analyzedAt', 'firstSeen', 'lastConfirmed', 'head'].includes(key)) {
+    if (['generatedAt', 'analyzedAt', 'firstSeen', 'lastConfirmed', 'head', 'repoId'].includes(key)) {
       output[key] = '<volatile>'
     } else {
       output[key] = normalizeRegistryGolden(value[key])

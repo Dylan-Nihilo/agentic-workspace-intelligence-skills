@@ -22,6 +22,7 @@ description: Write the human-facing synthesis (summary/architecture/keyFlows/ris
 1. 只能基于 synthesis request 内容写作;request 里没有的结论只能进入 `openQuestions`。
 2. 每个事实性陈述必须引用 request 中给出的 evidenceRefs 或 edge id。
 3. protected 文件只可陈述存在且受保护,不得推测内容。
+4. **一律用简体中文书写**所有自然语言字段(`summary`、各 `responsibility`、`keyFlows[].name` 与 `steps`、`risks[].rationale`、`openQuestions`);文件路径、标识符、代码符号、专有名词保持原文。目标读者是中文使用者,人读层出现整段英文即不合格。
 
 ## 流程
 
@@ -36,6 +37,7 @@ npm run --silent understanding:harness -- request --package <package-dir>
    - `architecture.layers/components/connections`:与 FactGraph 模块/边对齐,component 的 `keyFiles` 必须真实存在于 inventory。
    - `keyFlows`:2-5 条端到端链路,每个 step 带 evidence。
    - `risks`:只写有证据支撑的风险,带 severity 与 rationale。
+   - `businessDomains`(人读投影的业务分类,必填):**按业务功能而非 router/源码文件分组**。读 FactGraph 里的每个 `route` 节点及其 `routes-to` 证据中的中文注释,判断每条路由属于哪个业务,把它的顶层路径段归入某个域的 `prefixes`。每个域给 `name`(读者语言) + `description`(一句话业务作用) + `prefixes`(顶层路径段数组)。**杂糅型 router 必须拆开**(如银行、薪酬、记账路由不得挂在"发票"域下);每个顶层路径段只归一个域,入口/工具类路由归入一个"通用/其他"域。
 3. 写回:
 
 ```bash
