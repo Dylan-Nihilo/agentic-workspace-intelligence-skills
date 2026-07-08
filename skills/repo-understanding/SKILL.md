@@ -32,6 +32,8 @@ description: Orchestrate end-to-end understanding of a SINGLE repository into an
 6. 探索和验证写回只走 `ingest`;schema 拒绝时按 `issues[]` 修正,不得绕过。
 7. 最终综合写回只走 `write-subagent`,不得直接编辑 `analyses/repo-understanding.json`。
 8. 若运行时支持并行子代理,可以并行处理 dispatch bundles;否则顺序执行同一文件契约。
+9. 档位地板(不可裁量):`adversarial-verify` bundle 与最终综合(repo-synthesizer)不得派给低于主线程默认档的子代理——裁决与综合的错误没有下游门禁兜底,此条不在第 3 步的调整授权范围内。
+10. 失败升档:低档 bundle 连续 2 次 `merged:false` 或 `factsAccepted=0` 时,建议以更高档重派该 bundle 一次,并在轮次简报中记录"升档重试"。
 
 ## 流程
 
@@ -57,6 +59,9 @@ npm run --silent understanding:harness -- status --package <package-dir>
    - `dispatch`:执行 `dispatch`,读取 manifest,让每个 bundle 按 `repo-explorer` 或 `repo-fact-verifier` 流程写出 output,再按 manifest 顺序串行 `ingest`。
    - `synthesize`:退出探索循环,先执行 `verify`,通过后进入 `repo-synthesizer`。
    - `done`:终止循环,进入报告与交付。
+
+**子代理档位**:manifest 每个 bundle 带 `effort`(low/medium/high)。它是**默认先验,不是指令**——最终派什么档由你决定。**若你的运行时支持为子代理指定模型或推理档位**(如子代理调用参数、按次 CLI 覆盖、agent 定义文件等你运行时自己的机制),以 effort 为起点派遣:`low` → 你可用的最经济模型;`medium` → 默认;`high` → 与主线程同级或你可用的最高推理档;**并允许你基于自己掌握的信号上下调整**——bundle 任务量异常大或小、仓库明显复杂或简单、上一轮该 explorer 的接受率、剩余预算。调整时在轮次简报中说明一句理由。**唯一不可调整的是档位地板(约束第 9 条)**。若运行时不支持,忽略 effort,全部用默认——行为与不分档完全一致。
+
 4. 每次 `ingest` 返回 `{merged:false, issues:[...]}` 时,把 issues 原样交回对应 worker 修正,最多 2 次;仍失败时用 open-question 原语留痕并上报 rejected:
 
 ```bash

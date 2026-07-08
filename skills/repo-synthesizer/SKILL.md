@@ -1,6 +1,7 @@
 ---
 name: repo-synthesizer
 version: 1.0.0
+effort: high
 harnessContract:
   writeSubagentResult: repo-harness-write-subagent-result/v1
   output: repo-understanding-analysis/v1

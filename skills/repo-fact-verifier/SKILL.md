@@ -1,6 +1,7 @@
 ---
 name: repo-fact-verifier
 version: 1.0.0
+effort: high
 harnessContract:
   dispatch: repo-explorer-dispatch/v1
   ingestResult: repo-harness-ingest-result/v1
