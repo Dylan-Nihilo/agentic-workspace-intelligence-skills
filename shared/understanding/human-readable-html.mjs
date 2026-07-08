@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { EXPLORERS, PREDICATES } from './harness-registry.mjs'
 
 const HTML_SCHEMA = 'repo-human-readable-html/v1'
 const DEFAULT_ACCENT = '#002FA7'
@@ -1098,21 +1099,7 @@ function translateNodeType(value) {
 }
 
 function translatePredicate(value) {
-  const map = {
-    contains: '包含',
-    imports: '导入',
-    'dynamic-imports': '动态导入',
-    'routes-to': '路由到',
-    calls: '调用',
-    'depends-on': '依赖',
-    'reads-from': '读取',
-    'writes-to': '写入',
-    'guarded-by': '受权限保护',
-    registers: '注册',
-    implements: '实现',
-    extends: '继承',
-  }
-  return map[String(value || '')] || value
+  return PREDICATES[String(value || '')]?.zhLabel || value
 }
 
 function translateTaskType(value) {
@@ -1144,18 +1131,7 @@ function translateStatus(value) {
 }
 
 function translateExplorer(value) {
-  const map = {
-    'coverage-directed': '覆盖导向',
-    'adversarial-verify': '反向验证',
-    'dynamic-import': '动态导入',
-    'route-binding': '路由绑定',
-    'auth-chain': '权限链',
-    'call-chain': '调用链',
-    'data-access': '数据访问',
-    'vue-containment': 'Vue 结构',
-    unknown: 'unknown',
-  }
-  return map[String(value || '')] || value
+  return EXPLORERS[String(value || '')]?.label || value
 }
 
 function edgeRank(edge) {

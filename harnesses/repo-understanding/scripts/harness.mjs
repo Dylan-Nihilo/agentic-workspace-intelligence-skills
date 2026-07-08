@@ -16,11 +16,17 @@ import {
 import { writeExplorationAnalysis } from '../../../shared/understanding/repo-exploration-core.mjs'
 import { projectHarnessPackage } from '../../../shared/understanding/fact-graph-harness.mjs'
 import { generateHumanReadableHtml } from '../../../shared/understanding/human-readable-html.mjs'
+import {
+  EXPLORER,
+  assertKnownExplorers,
+  explorerEnabled,
+  projectionNames,
+} from '../../../shared/understanding/harness-registry.mjs'
 
 function usage() {
   console.error(`Usage:
   harness analyze --repo /path/to/repo [--out /path/to/package] [--max-files 16000] [--incremental] [--base HEAD]
-  harness project --package /path/to/package [--only render-graph|knowledge-index|wiki|all]
+  harness project --package /path/to/package [--only ${[...projectionNames(), 'all'].join('|')}]
   harness status --package /path/to/package
   harness dispatch --package /path/to/package [--max-tasks 40] [--explorers a,b,c]
   harness ingest --package /path/to/package (--analysis /path/to/output.json | --open-question text [--tasks id1,id2]) [--explorer name] [--round n]
@@ -91,12 +97,17 @@ function analyze(argv) {
 function project(argv) {
   const args = parseArgs(argv, ['package'])
   const only = args.only || 'all'
-  if (!['render-graph', 'knowledge-index', 'wiki', 'all'].includes(only)) usage()
+  if (![...projectionNames(), 'all'].includes(only)) usage()
   const packageDir = path.resolve(args.package)
-  const artifacts = projectHarnessPackage(packageDir, { only })
+  const artifacts = only === 'html' ? null : projectHarnessPackage(packageDir, { only })
+  const htmlResult = only === 'html' || only === 'all'
+    ? generateHumanReadableHtml({ packageDir })
+    : null
   const validation = writeValidation(packageDir)
   console.log(`Reprojected ${only} from existing FactGraph package: ${packageDir}`)
-  console.log(`FactGraph edges: ${Object.keys(artifacts.factGraph.edges).length}`)
+  const factGraph = artifacts?.factGraph || readJson(path.join(packageDir, 'fact-graph.json'))
+  console.log(`FactGraph edges: ${Object.keys(factGraph.edges).length}`)
+  if (htmlResult) console.log(`HTML: ${htmlResult.output}`)
   console.log(`Validation passed: ${validation.passed}`)
   if (!validation.passed) process.exitCode = 2
 }
@@ -208,12 +219,13 @@ function explore(argv) {
   const runner = args.runner || 'codex'
   if (runner !== 'codex') usage()
   const maxTasks = args['max-tasks'] ? Number(args['max-tasks']) : 40
-  const rounds = args.rounds ? Number(args.rounds) : (readHarnessConfig().maxExplorerRounds || 2)
+  const harnessConfig = readHarnessConfig()
+  const rounds = args.rounds ? Number(args.rounds) : (harnessConfig.maxExplorerRounds || 2)
   if (!Number.isFinite(maxTasks) || !Number.isFinite(rounds)) usage()
 
   const initial = readPackageState(packageDir)
   const untilCoverage = parseUntilCoverage(args['until-coverage'], initial.gapQueue.coverageThreshold)
-  const firstDispatch = buildExplorerDispatch(packageDir, initial, maxTasks)
+  const firstDispatch = buildExplorerDispatch(packageDir, initial, maxTasks, null, harnessConfig.explorers || {})
   if (!firstDispatch.taskCount) {
     console.log(`Explore has no open executable tasks: coverage=${initial.gapQueue.coverageScore}, tasks=${initial.gapQueue.tasks?.length || 0}`)
     return
@@ -231,7 +243,7 @@ function explore(argv) {
       console.log(`Explore stopped before round ${round}: coverage=${state.gapQueue.coverageScore} reached ${untilCoverage}`)
       break
     }
-    const dispatchManifest = createDispatchRound(packageDir, { maxTasks })
+    const dispatchManifest = createDispatchRound(packageDir, { maxTasks, explorerConfig: harnessConfig.explorers || {} })
     if (!dispatchManifest.explorers.length) {
       console.log(`Explore stopped before round ${round}: no open executable tasks`)
       break
@@ -325,6 +337,7 @@ function serve(argv) {
 
 function buildHarnessStatus(packageDir, options = {}) {
   const root = path.resolve(packageDir)
+  const explorerConfig = options.explorerConfig || readHarnessConfig().explorers || {}
   const validation = options.validation || writeValidation(root)
   const inventory = readJson(path.join(root, 'static', 'inventory.json'))
   const factGraph = readJson(path.join(root, 'fact-graph.json'))
@@ -337,7 +350,10 @@ function buildHarnessStatus(packageDir, options = {}) {
   const statusCounts = countTasksBy(tasks, task => task.status || 'unknown')
   const typeCounts = countTasksBy(tasks, task => task.type || 'unknown')
   const statusTypeCounts = countTasksBy(tasks, task => `${task.status || 'unknown'}:${task.type || 'unknown'}`)
-  const executableOpenTasks = executableGapTasks(gapQueue).length
+  const executableOpenTasks = executableGapTasks(gapQueue, explorerConfig).length
+  const openDisabledTasks = candidateExecutableGapTasks(gapQueue)
+    .filter(task => !explorerEnabled(task.explorer, explorerConfig))
+    .length
   const hasSynthesis = fs.existsSync(path.join(root, 'analyses', 'repo-understanding.json'))
   const nextAction = executableOpenTasks > 0
     ? 'dispatch'
@@ -360,6 +376,7 @@ function buildHarnessStatus(packageDir, options = {}) {
       done: (statusCounts.done || 0) + doneFromHistory,
       skipped: statusCounts.skipped || 0,
       executableOpen: executableOpenTasks,
+      openDisabled: openDisabledTasks,
       byType: typeCounts,
       byStatusType: statusTypeCounts,
     },
@@ -378,7 +395,8 @@ function createDispatchRound(packageDir, options = {}) {
   const root = path.resolve(packageDir)
   const harnessRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
   const state = readPackageState(root)
-  const dispatchPlan = buildExplorerDispatch(root, state, options.maxTasks || 40, options.explorers)
+  const explorerConfig = options.explorerConfig || readHarnessConfig().explorers || {}
+  const dispatchPlan = buildExplorerDispatch(root, state, options.maxTasks || 40, options.explorers, explorerConfig)
   const round = options.round || nextDispatchRound(root)
   const dispatchDir = path.join(root, 'exploration', 'dispatch', `round-${round}`)
   ensureDir(dispatchDir)
@@ -505,10 +523,10 @@ function ingestVerificationAnalysis(packageDir, value, provenance = {}) {
   const existing = readJsonIfExists(path.join(root, 'analyses', 'repo-exploration.json'))
   const base = existing || emptyExplorationAnalysis(inventory.repo)
   const verifierAnalysis = verifierOutputToExplorationAnalysis(value, provenance)
-  const next = mergeExplorationAnalyses(base, verifierAnalysis, `round ${provenance.round || 'manual'} adversarial-verify`)
+  const next = mergeExplorationAnalyses(base, verifierAnalysis, `round ${provenance.round || 'manual'} ${EXPLORER.adversarialVerify}`)
   const result = writeExplorationAnalysis(root, next, {
     runtime: provenance.runtime || 'agent-runtime',
-    role: 'adversarial-verify',
+    role: EXPLORER.adversarialVerify,
     sessionId: provenance.round ? `harness-dispatch-round-${provenance.round}` : undefined,
     sourcePath: provenance.analysisPath,
   })
@@ -1078,7 +1096,7 @@ function safeFileName(value) {
 }
 
 function schemaPathForExplorer(explorer) {
-  const schemaName = explorer === 'adversarial-verify'
+  const schemaName = explorer === EXPLORER.adversarialVerify
     ? 'verification.schema.json'
     : 'explorer-output.schema.json'
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../schemas', schemaName)
@@ -1128,7 +1146,7 @@ function renderDispatchBundleMarkdown({ packageDir, repo, round, explorer, tasks
 }
 
 function isVerificationOutput(value, explorer) {
-  return explorer === 'adversarial-verify'
+  return explorer === EXPLORER.adversarialVerify
     || value?.schemaVersion === 'repo-adversarial-verification/v1'
     || (Array.isArray(value?.verdicts) && !Array.isArray(value?.facts))
 }
@@ -1149,12 +1167,12 @@ function verifierOutputToExplorationAnalysis(value, provenance = {}) {
       ...skipped.map(item => ({
         question: `Verifier marked ${item.edgeId} insufficient: ${item.reason}`,
         relatedNodes: [item.edgeId],
-        raisedBy: 'adversarial-verify',
+        raisedBy: EXPLORER.adversarialVerify,
       })),
       ...refuted.map(item => ({
         question: `Verifier refuted ${item.edgeId}: ${item.reason}`,
         relatedNodes: [item.edgeId],
-        raisedBy: 'adversarial-verify',
+        raisedBy: EXPLORER.adversarialVerify,
       })),
     ],
     observations: [],
@@ -1194,8 +1212,8 @@ function readPackageState(packageDir) {
   }
 }
 
-function buildExplorerDispatch(packageDir, state, maxTasks, explorerFilter = null) {
-  const tasks = executableGapTasks(state.gapQueue)
+function buildExplorerDispatch(packageDir, state, maxTasks, explorerFilter = null, explorerConfig = {}) {
+  const tasks = executableGapTasks(state.gapQueue, explorerConfig)
     .filter(task => !explorerFilter || explorerFilter.has(task.explorer))
     .slice(0, maxTasks)
   const byExplorer = new Map()
@@ -1214,14 +1232,19 @@ function buildExplorerDispatch(packageDir, state, maxTasks, explorerFilter = nul
       explorer,
       tasks: explorerTasks,
       tokenBudget: explorerTasks.reduce((sum, task) => sum + (task.tokenBudget || 0), 0),
-      prompt: explorer === 'adversarial-verify'
+      prompt: explorer === EXPLORER.adversarialVerify
         ? renderVerifierPrompt(explorerTasks, state.factGraph)
         : renderExplorerPrompt(explorer, explorerTasks, state.factGraph),
     })),
   }
 }
 
-function executableGapTasks(gapQueue) {
+function executableGapTasks(gapQueue, explorerConfig = {}) {
+  return candidateExecutableGapTasks(gapQueue)
+    .filter(task => explorerEnabled(task.explorer, explorerConfig))
+}
+
+function candidateExecutableGapTasks(gapQueue) {
   return (gapQueue.tasks || [])
     .filter(task => task.status === 'open')
     .filter(task => EXECUTABLE_GAP_TYPES.has(task.type))
@@ -1455,7 +1478,9 @@ function mergeExplorationAnalyses(base, next, strategyNote) {
 
 function readHarnessConfig() {
   const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../harness.config.json')
-  return readJsonIfExists(file) || {}
+  const config = readJsonIfExists(file) || {}
+  assertKnownExplorers(config.explorers || {}, 'harness.config.json explorers')
+  return config
 }
 
 function readJson(file) {

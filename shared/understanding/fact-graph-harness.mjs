@@ -2,6 +2,13 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  EXPLORER,
+  assertKnownExplorers,
+  explorerBudget,
+  pickExplorerForPath,
+  validPredicateSet,
+} from './harness-registry.mjs'
 
 const FACT_GRAPH_VERSION = '1.0'
 const FACT_SCHEMA = 'repo-fact-graph/v1'
@@ -9,20 +16,7 @@ const RENDER_SCHEMA = 'repo-render-graph/v1'
 const KNOWLEDGE_SCHEMA = 'repo-knowledge-index/v1'
 
 const NODE_TYPES = new Set(['file', 'module', 'symbol', 'route', 'package', 'service', 'config', 'datastore'])
-const EDGE_PREDICATES = new Set([
-  'imports',
-  'dynamic-imports',
-  'contains',
-  'depends-on',
-  'routes-to',
-  'registers',
-  'calls',
-  'guarded-by',
-  'reads-from',
-  'writes-to',
-  'extends',
-  'implements',
-])
+const EDGE_PREDICATES = validPredicateSet()
 
 const CONFIDENCE = {
   explicit: 0.95,
@@ -69,13 +63,15 @@ function loadHarnessOptions() {
   const configPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../harnesses/repo-understanding/harness.config.json')
   try {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    assertKnownExplorers(config.explorers || {}, 'harness.config.json explorers')
     return {
       coverageThreshold: config.coverageThreshold,
       renderNodeLimit: config.renderNodeLimit,
-      explorerBudgets: Object.fromEntries(Object.entries(config.explorers || {}).map(([name, value]) => [name, value.tokenBudget])),
+      explorers: config.explorers || {},
       maxExplorerRounds: config.maxExplorerRounds,
     }
-  } catch {
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
     return {}
   }
 }
@@ -1052,7 +1048,7 @@ function buildGapQueue(factGraph, inventory, options, previousGapQueue = null) {
     if ((edge.source !== 'static' || edge.confidence <= 0.7) && !isExternalVerified(edge)) {
       addTask({
         priority: 'medium',
-        explorer: 'adversarial-verify',
+        explorer: EXPLORER.adversarialVerify,
         type: 'low-confidence-fact',
         reason: `${edge.subject} ${edge.predicate} ${edge.object} has confidence ${edge.confidence}.`,
         relatedNodes: [edge.subject, edge.object, edge.id],
@@ -1064,7 +1060,7 @@ function buildGapQueue(factGraph, inventory, options, previousGapQueue = null) {
   for (const item of factGraph.quality?.unresolvedImports || []) {
     addTask({
       priority: item.kind === 'js-dynamic-import' ? 'high' : 'medium',
-      explorer: item.kind === 'js-dynamic-import' ? 'dynamic-import' : 'route-binding',
+      explorer: item.kind === 'js-dynamic-import' ? EXPLORER.dynamicImport : EXPLORER.routeBinding,
       type: 'unresolved-import',
       reason: `Import target ${item.target} in ${item.file} was not resolved to a file node: ${item.reason}.`,
       relatedNodes: [fileId(item.file)],
@@ -1087,7 +1083,7 @@ function buildGapQueue(factGraph, inventory, options, previousGapQueue = null) {
   for (const question of factGraph.openQuestions || []) {
     addTask({
       priority: question.raisedBy === 'coverage-gate' ? 'high' : 'medium',
-      explorer: question.raisedBy === 'coverage-gate' ? 'coverage-directed' : question.raisedBy,
+      explorer: question.raisedBy === 'coverage-gate' ? EXPLORER.coverageDirected : question.raisedBy,
       type: 'open-question',
       reason: question.question,
       relatedNodes: question.relatedNodes,
@@ -1748,6 +1744,7 @@ function refreshPackageIndex(root, artifacts) {
     renderGraph: 'render-graph.json',
     knowledgeIndexJson: 'knowledge-index.json',
     knowledgeIndexJsonl: 'knowledge-index.jsonl',
+    humanReadableHtml: 'human-readable.html',
     wiki: 'wiki/',
   }
   index.static = {
@@ -2133,26 +2130,17 @@ function edgeStyle(edge) {
 }
 
 function explorerForPath(filePath) {
-  if (/\.vue$|components?|views?|pages?/i.test(filePath)) return 'vue-containment'
-  if (/route|router|controller|mapping/i.test(filePath)) return 'route-binding'
-  if (/auth|security|permission|filter|interceptor|guard/i.test(filePath)) return 'auth-chain'
-  if (/dao|mapper|repository|entity|sql|datasource|redis|cache/i.test(filePath)) return 'data-access'
-  if (/client|facade|rpc|http|mq|kafka|rocket|queue|consumer|producer/i.test(filePath)) return 'call-chain'
-  return 'coverage-directed'
+  return pickExplorerForPath(filePath)
 }
 
 function explorerTokenBudget(explorer, options = {}) {
-  if (options.explorerBudgets?.[explorer]) return options.explorerBudgets[explorer]
-  return {
-    'vue-containment': 12000,
-    'route-binding': 12000,
-    'dynamic-import': 10000,
-    'call-chain': 18000,
-    'auth-chain': 14000,
-    'data-access': 16000,
-    'adversarial-verify': 8000,
-    'coverage-directed': 10000,
-  }[explorer] || 10000
+  return explorerBudget(explorer, explorerRuntimeConfig(options))
+}
+
+function explorerRuntimeConfig(options = {}) {
+  if (options.explorers) return options.explorers
+  if (!options.explorerBudgets) return {}
+  return Object.fromEntries(Object.entries(options.explorerBudgets).map(([name, tokenBudget]) => [name, { tokenBudget }]))
 }
 
 function priorityRank(priority) {

@@ -8,6 +8,7 @@ import {
   refreshHarnessArtifactsForPackage,
   writeHarnessArtifacts,
 } from './fact-graph-harness.mjs'
+import { validPredicateSet } from './harness-registry.mjs'
 
 export const SCHEMA = {
   inventory: 'repo-inventory/v1',
@@ -330,6 +331,7 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
       renderGraph: 'render-graph.json',
       knowledgeIndexJson: 'knowledge-index.json',
       knowledgeIndexJsonl: 'knowledge-index.jsonl',
+      humanReadableHtml: 'human-readable.html',
       wiki: 'wiki/',
     },
     transientRequests: {
@@ -735,7 +737,7 @@ function validateFactGraph(factGraph, inventory, result) {
   if (!nodeIds.size) result.issues.push('FactGraph has no nodes')
   if (!Object.keys(edges).length) result.issues.push('FactGraph has no edges')
   const validNodeTypes = new Set(['file', 'module', 'symbol', 'route', 'package', 'service', 'config', 'datastore'])
-  const validPredicates = new Set(['imports', 'dynamic-imports', 'contains', 'depends-on', 'routes-to', 'registers', 'calls', 'guarded-by', 'reads-from', 'writes-to', 'extends', 'implements'])
+  const validPredicates = validPredicateSet()
   const inventoryPaths = new Set(inventory.files.map(file => file.path))
   for (const [id, node] of Object.entries(nodes)) {
     if (!node.id || node.id !== id) result.issues.push(`FactGraph node id mismatch: ${node.id || 'missing'}`)

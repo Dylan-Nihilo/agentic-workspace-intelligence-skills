@@ -5,10 +5,16 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  EXPLORERS,
+  PREDICATES,
+  PROJECTIONS,
+} from '../../shared/understanding/harness-registry.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const expectations = readJson(path.join(repoRoot, 'evals', 'fixtures', 'golden', 'contract.expectations.json'))
 const harnessScript = path.join(repoRoot, 'harnesses', 'repo-understanding', 'scripts', 'harness.mjs')
+const harnessConfigPath = path.join(repoRoot, 'harnesses', 'repo-understanding', 'harness.config.json')
 const auditExportScript = path.join(repoRoot, 'skills', 'agentic-coding-audit', 'scripts', 'export-audit-data.mjs')
 const normalizeCodingPoolScript = path.join(repoRoot, 'skills', 'agentic-coding-audit', 'scripts', 'normalize-coding-pool.mjs')
 const datasourcePipelineScript = path.join(repoRoot, 'skills', 'agentic-datasource-orchestrator', 'scripts', 'run-pipeline.mjs')
@@ -24,6 +30,7 @@ try {
   assertEqual(dispatchStatus.schemaVersion, expectations.statusSchemaVersion, 'status schemaVersion')
   assertIncludes(expectations.nextActions, dispatchStatus.nextAction, 'status nextAction enum')
   assertEqual(dispatchStatus.nextAction, 'dispatch', 'status nextAction after analyze')
+  assertRegistryContracts(packageDir)
 
   const dispatch = runHarnessJson(['dispatch', '--package', packageDir, '--max-tasks', '3'])
   assertEqual(dispatch.schemaVersion, expectations.dispatchSchemaVersion, 'dispatch schemaVersion')
@@ -271,6 +278,7 @@ try {
   const doneStatus = runHarnessJson(['status', '--package', packageDir])
   assertEqual(doneStatus.schemaVersion, expectations.statusSchemaVersion, 'done status schemaVersion')
   assertEqual(doneStatus.nextAction, 'done', 'status nextAction with synthesis and no executable tasks')
+  assertProjectionProjectCommand(packageDir)
 
   console.log(JSON.stringify({
     ok: true,
@@ -296,6 +304,12 @@ try {
       'run-pipeline:confirm-external',
       'run-ce-analysis:shared-ingest',
       'run-ce-analysis:parse-failure',
+      'registry:schema-predicate-sync',
+      'registry:protocol-anchors',
+      'registry:readme-projections',
+      'registry:default-mini-repo-golden',
+      'registry:disabled-explorer',
+      'project:html',
       'nextAction:dispatch',
       'nextAction:synthesize',
       'nextAction:done',
@@ -339,11 +353,154 @@ function assertExplorerOutputSchema() {
   assertArrayEqual(schema.required, expectations.explorerOutputRequired, 'explorer output required fields')
   const evidenceRequired = schema.properties.facts.items.properties.evidence.items.required
   assertArrayEqual(evidenceRequired, expectations.explorerEvidenceRequired, 'explorer evidence required fields')
+  const predicateEnum = schema.properties.facts.items.properties.predicate.enum
+  assertArrayEqual(predicateEnum, Object.keys(PREDICATES), 'explorer predicate enum registry sync')
 }
 
 function assertVerificationSchema() {
   const schema = readJson(path.join(repoRoot, 'harnesses', 'repo-understanding', 'schemas', 'verification.schema.json'))
   assertEqual(schema.properties.schemaVersion.const, expectations.adversarialVerificationSchemaVersion, 'verification schemaVersion const')
+}
+
+function assertRegistryContracts(packageDir) {
+  assertRegistryConsumerWiring()
+  assertExplorerProtocolAnchors()
+  assertReadmeProjectionOutputs()
+  assertHarnessConfigExplorerKeys()
+  assertMiniRepoRegistryGolden(packageDir)
+  assertDisabledExplorerBehavior(packageDir)
+  assertUnknownExplorerConfigFails(packageDir)
+}
+
+function assertRegistryConsumerWiring() {
+  const registry = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'harness-registry.mjs'), 'utf8')
+  assert(!/^import\s/m.test(registry), 'harness-registry must not import other modules')
+  assert(!/\b(fs|readFile|writeFile|fetch|spawn)\b/.test(registry), 'harness-registry must remain side-effect-free data and pure queries')
+
+  const factHarness = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'fact-graph-harness.mjs'), 'utf8')
+  assert(factHarness.includes('pickExplorerForPath'), 'fact-graph-harness explorerForPath must delegate to registry')
+  assert(factHarness.includes('explorerBudget'), 'fact-graph-harness explorerTokenBudget must delegate to registry')
+  assert(!factHarness.includes("const EDGE_PREDICATES = new Set(["), 'fact-graph-harness must not keep a private predicate set')
+  assert(!factHarness.includes("'vue-containment': 12000"), 'fact-graph-harness must not keep a private explorer budget map')
+
+  const explorationCore = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'repo-exploration-core.mjs'), 'utf8')
+  assert(explorationCore.includes('factExplorerNames'), 'repo-exploration-core explorer enum must derive from registry')
+  assert(explorationCore.includes('validPredicateSet'), 'repo-exploration-core predicate validation must derive from registry')
+
+  const readableHtml = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'human-readable-html.mjs'), 'utf8')
+  assert(readableHtml.includes('EXPLORERS') && readableHtml.includes('PREDICATES'), 'human-readable translations must derive from registry')
+
+  const harnessCli = fs.readFileSync(harnessScript, 'utf8')
+  assert(harnessCli.includes('projectionNames'), 'harness project whitelist must derive from registry projections')
+  assert(harnessCli.includes('explorerEnabled'), 'harness executable gap filtering must honor registry enabled state')
+}
+
+function assertExplorerProtocolAnchors() {
+  const markdown = fs.readFileSync(path.join(repoRoot, 'skills', 'repo-explorer', 'references', 'explorer-protocol.md'), 'utf8')
+  for (const [predicate, meta] of Object.entries(PREDICATES)) {
+    const anchor = meta.protocolAnchor || predicate
+    assert(protocolHeadingHasAnchor(markdown, anchor), `explorer protocol missing heading anchor for predicate: ${predicate}`)
+  }
+}
+
+function protocolHeadingHasAnchor(markdown, anchor) {
+  const pattern = new RegExp(`^###\\s+.*\`${escapeRegExp(anchor)}\``, 'm')
+  return pattern.test(markdown)
+}
+
+function assertReadmeProjectionOutputs() {
+  const readme = fs.readFileSync(path.join(repoRoot, 'harnesses', 'repo-understanding', 'README.md'), 'utf8')
+  const outputSection = readme.split('## Output Contract')[1]?.split('\n## ')[0] || ''
+  for (const projection of Object.values(PROJECTIONS)) {
+    assert(outputSection.includes(projection.output), `README Output Contract missing projection output: ${projection.output}`)
+  }
+}
+
+function assertHarnessConfigExplorerKeys() {
+  const config = readJson(harnessConfigPath)
+  const unknown = Object.keys(config.explorers || {}).filter(name => !EXPLORERS[name])
+  assertEqual(unknown.length, 0, `harness.config explorers must be registry keys: ${unknown.join(', ')}`)
+}
+
+function assertMiniRepoRegistryGolden(packageDir) {
+  const goldenDir = path.join(repoRoot, 'evals', 'fixtures', 'golden', 'mini-repo-registry-baseline')
+  for (const file of ['fact-graph.json', 'gap-queue.json', 'render-graph.json', 'knowledge-index.json']) {
+    const actual = normalizeRegistryGolden(readJson(path.join(packageDir, file)))
+    const expected = normalizeRegistryGolden(readJson(path.join(goldenDir, file)))
+    assertJsonEqual(actual, expected, `mini-repo registry baseline ${file}`)
+  }
+}
+
+function assertDisabledExplorerBehavior(packageDir) {
+  const disabledExplorer = 'route-binding'
+  const disabledPackage = copyFixture(packageDir, 'registry-disabled-package')
+  const gapQueue = readJson(path.join(disabledPackage, 'gap-queue.json'))
+  const disabledTasks = (gapQueue.tasks || []).filter(task => task.explorer === disabledExplorer)
+  assert(disabledTasks.length > 0, `${disabledExplorer} fixture tasks should exist before disabled-explorer contract`)
+
+  withTemporaryHarnessConfig(config => {
+    config.explorers = { ...(config.explorers || {}) }
+    config.explorers[disabledExplorer] = { ...(config.explorers[disabledExplorer] || {}), enabled: false }
+    return config
+  }, () => {
+    const status = runHarnessJson(['status', '--package', disabledPackage])
+    assert(status.tasks.openDisabled >= disabledTasks.length, 'disabled explorer tasks should be counted as openDisabled')
+    assert(status.tasks.executableOpen < (gapQueue.openTaskCount || gapQueue.tasks.length), 'disabled explorer tasks should not count as executable')
+
+    const dispatch = runHarnessJson(['dispatch', '--package', disabledPackage, '--max-tasks', '40'])
+    assert(!dispatch.explorers.some(item => item.explorer === disabledExplorer), 'dispatch must skip disabled explorer bundles')
+
+    const onlyDisabled = {
+      ...gapQueue,
+      tasks: disabledTasks.map(task => ({ ...task, status: 'open', dispatch: undefined })),
+    }
+    onlyDisabled.taskCount = onlyDisabled.tasks.length
+    onlyDisabled.openTaskCount = onlyDisabled.tasks.length
+    onlyDisabled.dispatchedTaskCount = 0
+    writeJson(path.join(disabledPackage, 'gap-queue.json'), onlyDisabled)
+
+    const disabledOnlyStatus = runHarnessJson(['status', '--package', disabledPackage])
+    assertEqual(disabledOnlyStatus.tasks.executableOpen, 0, 'only disabled tasks executableOpen')
+    assertEqual(disabledOnlyStatus.tasks.openDisabled, disabledTasks.length, 'only disabled tasks openDisabled')
+    assertEqual(disabledOnlyStatus.nextAction, 'synthesize', 'only disabled tasks should converge to synthesize')
+  })
+
+  const restoredStatus = runHarnessJson(['status', '--package', disabledPackage])
+  assertEqual(restoredStatus.tasks.executableOpen, disabledTasks.length, 'reenabled explorer tasks should become executable again')
+  assertEqual(restoredStatus.nextAction, 'dispatch', 'reenabled explorer tasks should restore dispatch nextAction')
+}
+
+function assertUnknownExplorerConfigFails(packageDir) {
+  withTemporaryHarnessConfig(config => {
+    config.explorers = { ...(config.explorers || {}), 'typo-explorer': { enabled: true, tokenBudget: 1 } }
+    return config
+  }, () => {
+    runHarness(['status', '--package', packageDir], { expectExit: 1 })
+  })
+}
+
+function assertProjectionProjectCommand(packageDir) {
+  fs.rmSync(path.join(packageDir, 'human-readable.html'), { force: true })
+  runHarness(['project', '--package', packageDir, '--only', 'html'])
+  assert(fs.existsSync(path.join(packageDir, 'human-readable.html')), 'project --only html should write human-readable.html')
+
+  runHarness(['project', '--package', packageDir, '--only', 'all'])
+  for (const projection of Object.values(PROJECTIONS)) {
+    const output = path.join(packageDir, projection.output)
+    assert(fs.existsSync(output), `project --only all missing projection output: ${projection.output}`)
+  }
+  runHarness(['project', '--package', packageDir, '--only', 'bogus'], { expectExit: 1 })
+}
+
+function withTemporaryHarnessConfig(mutator, fn) {
+  const original = fs.readFileSync(harnessConfigPath, 'utf8')
+  try {
+    const next = mutator(JSON.parse(original))
+    writeJson(harnessConfigPath, next)
+    return fn()
+  } finally {
+    fs.writeFileSync(harnessConfigPath, original, 'utf8')
+  }
 }
 
 function assertExternalVerifierTrustBoundary() {
@@ -600,6 +757,24 @@ function buildValidAnalysis(root) {
     openQuestions: [],
     evidenceRefs: [evidenceRef],
   }
+}
+
+function normalizeRegistryGolden(value) {
+  if (Array.isArray(value)) return value.map(normalizeRegistryGolden)
+  if (!value || typeof value !== 'object') return value
+  const output = {}
+  for (const key of Object.keys(value).sort()) {
+    if (['generatedAt', 'analyzedAt', 'firstSeen', 'lastConfirmed', 'head'].includes(key)) {
+      output[key] = '<volatile>'
+    } else {
+      output[key] = normalizeRegistryGolden(value[key])
+    }
+  }
+  return output
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function readJson(file) {

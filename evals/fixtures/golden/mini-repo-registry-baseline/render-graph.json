@@ -1,0 +1,3998 @@
+{
+  "schemaVersion": "repo-render-graph/v1",
+  "version": "1.0",
+  "repoId": "f8eda86659620a5862b1",
+  "repo": {
+    "name": "mini-repo",
+    "path": "/Users/c0007/Desktop/yeepay projects/agentic-workspace-intelligence-skills/evals/fixtures/mini-repo",
+    "generatedAt": "2026-07-08T03:15:58.091Z",
+    "git": {
+      "branch": "main",
+      "head": "9fcf40c",
+      "remote": "https://github.com/Dylan-Nihilo/agentic-workspace-intelligence-skills.git"
+    }
+  },
+  "source": {
+    "factGraph": "fact-graph.json",
+    "inventory": "inventory.json"
+  },
+  "nodes": [
+    {
+      "id": "module:.",
+      "type": "module",
+      "kind": "module",
+      "label": "mini-repo",
+      "path": ".",
+      "tags": [
+        "repo-root",
+        "high-fan-out"
+      ],
+      "importance": 0.433,
+      "metadata": {
+        "git": {
+          "branch": "main",
+          "head": "9fcf40c",
+          "remote": "https://github.com/Dylan-Nihilo/agentic-workspace-intelligence-skills.git"
+        },
+        "fileCount": 16,
+        "files": 4,
+        "categories": {
+          "protected": 1,
+          "manifest": 1,
+          "docs": 1,
+          "config": 1
+        },
+        "languages": {
+          "Protected Metadata": 1,
+          "NPM JSON": 1,
+          "Markdown": 1,
+          "JSON": 1
+        }
+      },
+      "sizeHint": 43,
+      "view": {
+        "group": "module",
+        "position": [
+          80,
+          80
+        ],
+        "size": [
+          160,
+          56
+        ]
+      }
+    },
+    {
+      "id": "module:src",
+      "type": "module",
+      "kind": "module",
+      "label": "src",
+      "path": "src",
+      "tags": [
+        "high-fan-out"
+      ],
+      "importance": 0.538,
+      "metadata": {
+        "files": 11,
+        "categories": {
+          "source": 10,
+          "markup": 1
+        },
+        "languages": {
+          "TypeScript": 8,
+          "CSS": 1,
+          "Vue": 2
+        }
+      },
+      "sizeHint": 48,
+      "view": {
+        "group": "module",
+        "position": [
+          80,
+          162
+        ],
+        "size": [
+          166,
+          56
+        ]
+      }
+    },
+    {
+      "id": "module:public",
+      "type": "module",
+      "kind": "module",
+      "label": "public",
+      "path": "public",
+      "tags": [],
+      "importance": 0.144,
+      "metadata": {
+        "files": 1,
+        "categories": {
+          "markup": 1
+        },
+        "languages": {
+          "HTML": 1
+        }
+      },
+      "sizeHint": 30,
+      "view": {
+        "group": "module",
+        "position": [
+          80,
+          244
+        ],
+        "size": [
+          141,
+          56
+        ]
+      }
+    },
+    {
+      "id": "config:tsconfig.json",
+      "type": "config",
+      "kind": "config",
+      "label": "tsconfig.json",
+      "path": "tsconfig.json",
+      "lang": "JSON",
+      "tags": [
+        "config"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "category": "config"
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "config",
+        "position": [
+          300,
+          326
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "route:ANY:",
+      "type": "route",
+      "kind": "route",
+      "label": "/",
+      "path": "src/router.ts",
+      "tags": [
+        "route"
+      ],
+      "importance": 0.039,
+      "metadata": {
+        "kind": "js-route-config"
+      },
+      "sizeHint": 26,
+      "view": {
+        "group": "route",
+        "position": [
+          300,
+          408
+        ],
+        "size": [
+          134,
+          56
+        ]
+      }
+    },
+    {
+      "id": "route:ANY:-admin",
+      "type": "route",
+      "kind": "route",
+      "label": "/admin",
+      "path": "src/router.ts",
+      "tags": [
+        "route"
+      ],
+      "importance": 0.039,
+      "metadata": {
+        "kind": "js-route-config"
+      },
+      "sizeHint": 26,
+      "view": {
+        "group": "route",
+        "position": [
+          300,
+          490
+        ],
+        "size": [
+          134,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/router.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "router.ts",
+      "path": "src/router.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable",
+        "import-target"
+      ],
+      "importance": 0.574,
+      "metadata": {
+        "size": 436,
+        "lines": 18,
+        "hash": "37333cc76048d9e07a8caef4a9380be5d43ad452",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 49,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          572
+        ],
+        "size": [
+          169,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/auth.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "auth.ts",
+      "path": "src/auth.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable",
+        "import-target"
+      ],
+      "importance": 0.456,
+      "metadata": {
+        "size": 101,
+        "lines": 4,
+        "hash": "fb40d2161e8dc41927948ad8a78dbcf20cdd4f3f",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 44,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          654
+        ],
+        "size": [
+          161,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/api.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "api.ts",
+      "path": "src/api.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable",
+        "import-target"
+      ],
+      "importance": 0.287,
+      "metadata": {
+        "size": 136,
+        "lines": 6,
+        "hash": "76ef03b61df94c6c4023ab9f0aeb2ef367c7e41a",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 37,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          736
+        ],
+        "size": [
+          150,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/request.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "request.ts",
+      "path": "src/request.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable",
+        "import-target"
+      ],
+      "importance": 0.248,
+      "metadata": {
+        "size": 150,
+        "lines": 10,
+        "hash": "5b05c0d93e252ef1f5447aef9360f5047f253a3a",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 35,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          818
+        ],
+        "size": [
+          148,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/main.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "main.ts",
+      "path": "src/main.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable"
+      ],
+      "importance": 0.222,
+      "metadata": {
+        "size": 233,
+        "lines": 12,
+        "hash": "a162000e626b706ed5750333bdb640affc1ebbdf",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 34,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          900
+        ],
+        "size": [
+          146,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/views/AdminPage.vue",
+      "type": "file",
+      "kind": "file",
+      "label": "AdminPage.vue",
+      "path": "src/views/AdminPage.vue",
+      "lang": "Vue",
+      "tags": [
+        "source",
+        "content-analyzable",
+        "import-target"
+      ],
+      "importance": 0.208,
+      "metadata": {
+        "size": 44,
+        "lines": 4,
+        "hash": "f6ad7dfa4b8250dc8369e7899b00577abbacfccd",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 33,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          982
+        ],
+        "size": [
+          145,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/views/HomePage.vue",
+      "type": "file",
+      "kind": "file",
+      "label": "HomePage.vue",
+      "path": "src/views/HomePage.vue",
+      "lang": "Vue",
+      "tags": [
+        "source",
+        "content-analyzable",
+        "import-target"
+      ],
+      "importance": 0.208,
+      "metadata": {
+        "size": 43,
+        "lines": 4,
+        "hash": "44553d6e68df8fe167a9d6893dc374580cd2422e",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 33,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1064
+        ],
+        "size": [
+          145,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/components/GuardedButton.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "GuardedButton.ts",
+      "path": "src/components/GuardedButton.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable"
+      ],
+      "importance": 0.183,
+      "metadata": {
+        "size": 165,
+        "lines": 6,
+        "hash": "748febedc2c7b0fa9a53899e41fdf04f6da6b299",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 32,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1146
+        ],
+        "size": [
+          144,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:tsconfig.json",
+      "type": "file",
+      "kind": "file",
+      "label": "tsconfig.json",
+      "path": "tsconfig.json",
+      "lang": "JSON",
+      "tags": [
+        "config",
+        "content-analyzable"
+      ],
+      "importance": 0.144,
+      "metadata": {
+        "size": 117,
+        "lines": 10,
+        "hash": "683d453599c6e9aba233400aa88ba4ca30db0ca0",
+        "hashKind": "content",
+        "category": "config",
+        "protected": false
+      },
+      "sizeHint": 30,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1228
+        ],
+        "size": [
+          141,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:.env",
+      "type": "file",
+      "kind": "file",
+      "label": ".env",
+      "path": ".env",
+      "lang": "Protected Metadata",
+      "tags": [
+        "protected",
+        "metadata-only"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "size": 31,
+        "lines": 0,
+        "hash": "7d8ff5d81b5845e0f9bd9e2daf39ee467b3dd398",
+        "hashKind": "metadata",
+        "category": "protected",
+        "protected": true,
+        "protectionReason": "sensitive filename"
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1310
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:package.json",
+      "type": "file",
+      "kind": "file",
+      "label": "package.json",
+      "path": "package.json",
+      "lang": "NPM JSON",
+      "tags": [
+        "manifest",
+        "content-analyzable"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "size": 347,
+        "lines": 20,
+        "hash": "b704bc565f47311bba33b266e980d144b0e4b6f2",
+        "hashKind": "content",
+        "category": "manifest",
+        "protected": false
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1392
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:public/index.html",
+      "type": "file",
+      "kind": "file",
+      "label": "index.html",
+      "path": "public/index.html",
+      "lang": "HTML",
+      "tags": [
+        "markup",
+        "content-analyzable"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "size": 21,
+        "lines": 2,
+        "hash": "4bfda555404e6a41ede15d4ee305e2493f686a1e",
+        "hashKind": "content",
+        "category": "markup",
+        "protected": false
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1474
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:README.md",
+      "type": "file",
+      "kind": "file",
+      "label": "README.md",
+      "path": "README.md",
+      "lang": "Markdown",
+      "tags": [
+        "docs",
+        "content-analyzable"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "size": 67,
+        "lines": 4,
+        "hash": "53a2627200008b7afb4f47b4abb2b2563ffc7d71",
+        "hashKind": "content",
+        "category": "docs",
+        "protected": false
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1556
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/mock/routes.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "routes.ts",
+      "path": "src/mock/routes.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "size": 79,
+        "lines": 4,
+        "hash": "31f26d4f6300f7f930215550a7fc6b0912745f15",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1638
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/store.ts",
+      "type": "file",
+      "kind": "file",
+      "label": "store.ts",
+      "path": "src/store.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "source",
+        "content-analyzable"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "size": 53,
+        "lines": 4,
+        "hash": "9da008c35ed697a97ce529d875d5110850e44000",
+        "hashKind": "content",
+        "category": "source",
+        "protected": false
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1720
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "file:src/styles/app.css",
+      "type": "file",
+      "kind": "file",
+      "label": "app.css",
+      "path": "src/styles/app.css",
+      "lang": "CSS",
+      "tags": [
+        "markup",
+        "content-analyzable"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "size": 29,
+        "lines": 4,
+        "hash": "629e0144ddd1e81758f9a0062acd0e7bd17ee3d1",
+        "hashKind": "content",
+        "category": "markup",
+        "protected": false
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "file",
+        "position": [
+          520,
+          1802
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "package:axios",
+      "type": "package",
+      "kind": "package",
+      "label": "axios",
+      "tags": [
+        "runtime"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "version": "^1.6.0",
+        "scope": "runtime"
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "package",
+        "position": [
+          1180,
+          1884
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "package:typescript",
+      "type": "package",
+      "kind": "package",
+      "label": "typescript",
+      "tags": [
+        "dev"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "version": "^5.4.0",
+        "scope": "dev"
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "package",
+        "position": [
+          1180,
+          1966
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "package:vite",
+      "type": "package",
+      "kind": "package",
+      "label": "vite",
+      "tags": [
+        "dev"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "version": "^5.0.0",
+        "scope": "dev"
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "package",
+        "position": [
+          1180,
+          2048
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "package:vue",
+      "type": "package",
+      "kind": "package",
+      "label": "vue",
+      "tags": [
+        "runtime"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "version": "^3.4.0",
+        "scope": "runtime"
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "package",
+        "position": [
+          1180,
+          2130
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "package:vue-router",
+      "type": "package",
+      "kind": "package",
+      "label": "vue-router",
+      "tags": [
+        "runtime"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "version": "^4.3.0",
+        "scope": "runtime"
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "package",
+        "position": [
+          1180,
+          2212
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "symbol:src-api.ts:function:fetchInvoice",
+      "type": "symbol",
+      "kind": "symbol",
+      "label": "fetchInvoice",
+      "path": "src/api.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "function"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "kind": "function",
+        "signature": "export function fetchInvoice(invoiceId: string) {",
+        "package": null,
+        "line": 3
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "symbol",
+        "position": [
+          740,
+          2294
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "symbol:src-auth.ts:function:canAccessAdmin",
+      "type": "symbol",
+      "kind": "symbol",
+      "label": "canAccessAdmin",
+      "path": "src/auth.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "function"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "kind": "function",
+        "signature": "export function canAccessAdmin(permissionIds: string[]) {",
+        "package": null,
+        "line": 1
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "symbol",
+        "position": [
+          740,
+          2376
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+      "type": "symbol",
+      "kind": "symbol",
+      "label": "GuardedButton",
+      "path": "src/components/GuardedButton.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "function"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "kind": "function",
+        "signature": "export function GuardedButton(permissionIds: string[]) {",
+        "package": null,
+        "line": 3
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "symbol",
+        "position": [
+          740,
+          2458
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "symbol:src-request.ts:function:request",
+      "type": "symbol",
+      "kind": "symbol",
+      "label": "request",
+      "path": "src/request.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "function"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "kind": "function",
+        "signature": "export function request(path: string) {",
+        "package": null,
+        "line": 1
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "symbol",
+        "position": [
+          740,
+          2540
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    },
+    {
+      "id": "symbol:src-router.ts:function:createRouter",
+      "type": "symbol",
+      "kind": "symbol",
+      "label": "createRouter",
+      "path": "src/router.ts",
+      "lang": "TypeScript",
+      "tags": [
+        "function"
+      ],
+      "importance": 0.104,
+      "metadata": {
+        "kind": "function",
+        "signature": "export function createRouter() {",
+        "package": null,
+        "line": 5
+      },
+      "sizeHint": 29,
+      "view": {
+        "group": "symbol",
+        "position": [
+          740,
+          2622
+        ],
+        "size": [
+          139,
+          56
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:1381ad5348cc2846",
+      "subject": "module:.",
+      "object": "module:src",
+      "from": "module:.",
+      "to": "module:src",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:1381ad5348cc2846:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:8defd200e899b66c",
+      "subject": "module:.",
+      "object": "module:public",
+      "from": "module:.",
+      "to": "module:public",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:8defd200e899b66c:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:551a0cb7a03a32ca",
+      "subject": "module:.",
+      "object": "file:.env",
+      "from": "module:.",
+      "to": "file:.env",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": ".env",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:551a0cb7a03a32ca:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:806a14a739497718",
+      "subject": "module:.",
+      "object": "file:package.json",
+      "from": "module:.",
+      "to": "file:package.json",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:806a14a739497718:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:552de7342ca80389",
+      "subject": "module:public",
+      "object": "file:public/index.html",
+      "from": "module:public",
+      "to": "file:public/index.html",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:552de7342ca80389:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:1fcbf1696ee4a3c3",
+      "subject": "module:.",
+      "object": "file:README.md",
+      "from": "module:.",
+      "to": "file:README.md",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "README.md",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:1fcbf1696ee4a3c3:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:305cf456021f3804",
+      "subject": "module:src",
+      "object": "file:src/api.ts",
+      "from": "module:src",
+      "to": "file:src/api.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:305cf456021f3804:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:6572ae3bd3673586",
+      "subject": "module:src",
+      "object": "file:src/auth.ts",
+      "from": "module:src",
+      "to": "file:src/auth.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/auth.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:6572ae3bd3673586:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:98f69e8a7e269ef1",
+      "subject": "module:src",
+      "object": "file:src/components/GuardedButton.ts",
+      "from": "module:src",
+      "to": "file:src/components/GuardedButton.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:98f69e8a7e269ef1:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:9af9ac50e181280e",
+      "subject": "module:src",
+      "object": "file:src/main.ts",
+      "from": "module:src",
+      "to": "file:src/main.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:9af9ac50e181280e:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:93c5966f0738acdc",
+      "subject": "module:src",
+      "object": "file:src/mock/routes.ts",
+      "from": "module:src",
+      "to": "file:src/mock/routes.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/mock/routes.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:93c5966f0738acdc:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:e35e4536856a1241",
+      "subject": "module:src",
+      "object": "file:src/request.ts",
+      "from": "module:src",
+      "to": "file:src/request.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/request.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:e35e4536856a1241:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:5eb9aaed4bb9742a",
+      "subject": "module:src",
+      "object": "file:src/router.ts",
+      "from": "module:src",
+      "to": "file:src/router.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:5eb9aaed4bb9742a:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:0422eab9b414d45f",
+      "subject": "module:src",
+      "object": "file:src/store.ts",
+      "from": "module:src",
+      "to": "file:src/store.ts",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/store.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:0422eab9b414d45f:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:76df40a9f825b00b",
+      "subject": "module:src",
+      "object": "file:src/styles/app.css",
+      "from": "module:src",
+      "to": "file:src/styles/app.css",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/styles/app.css",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:76df40a9f825b00b:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:44588463b4e7c962",
+      "subject": "module:src",
+      "object": "file:src/views/AdminPage.vue",
+      "from": "module:src",
+      "to": "file:src/views/AdminPage.vue",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/views/AdminPage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:44588463b4e7c962:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:d2c14c03d3160a9b",
+      "subject": "module:src",
+      "object": "file:src/views/HomePage.vue",
+      "from": "module:src",
+      "to": "file:src/views/HomePage.vue",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/views/HomePage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:d2c14c03d3160a9b:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:807ae6aee51ef5a5",
+      "subject": "module:.",
+      "object": "file:tsconfig.json",
+      "from": "module:.",
+      "to": "file:tsconfig.json",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "tsconfig.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:807ae6aee51ef5a5:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:6ac976c4c51ee7df",
+      "subject": "file:tsconfig.json",
+      "object": "config:tsconfig.json",
+      "from": "file:tsconfig.json",
+      "to": "config:tsconfig.json",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "tsconfig.json",
+          "tool": "config-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:6ac976c4c51ee7df:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:62104d39a2f3f36b",
+      "subject": "file:src/api.ts",
+      "object": "symbol:src-api.ts:function:fetchInvoice",
+      "from": "file:src/api.ts",
+      "to": "symbol:src-api.ts:function:fetchInvoice",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.9,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function fetchInvoice(invoiceId: string) {\n  return request(`/api/invoices/${invoiceId}`)",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:62104d39a2f3f36b:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.9,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:131a5b510d52d364",
+      "subject": "file:src/auth.ts",
+      "object": "symbol:src-auth.ts:function:canAccessAdmin",
+      "from": "file:src/auth.ts",
+      "to": "symbol:src-auth.ts:function:canAccessAdmin",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.9,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/auth.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function canAccessAdmin(permissionIds: string[]) {\n  return permissionIds.includes('admin')",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:131a5b510d52d364:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.9,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:2642f866d6008d97",
+      "subject": "file:src/components/GuardedButton.ts",
+      "object": "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+      "from": "file:src/components/GuardedButton.ts",
+      "to": "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.9,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function GuardedButton(permissionIds: string[]) {\n  return canAccessAdmin(permissionIds) ? 'enabled' : 'disabled'",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:2642f866d6008d97:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.9,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:54854e3fc9fab0b5",
+      "subject": "file:src/request.ts",
+      "object": "symbol:src-request.ts:function:request",
+      "from": "file:src/request.ts",
+      "to": "symbol:src-request.ts:function:request",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.9,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/request.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function request(path: string) {\n  return {",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:54854e3fc9fab0b5:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.9,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:33b90e9d2f630b84",
+      "subject": "file:src/router.ts",
+      "object": "symbol:src-router.ts:function:createRouter",
+      "from": "file:src/router.ts",
+      "to": "symbol:src-router.ts:function:createRouter",
+      "predicate": "contains",
+      "kind": "contains",
+      "label": "contains",
+      "confidence": 0.9,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 4,
+          "endLine": 6,
+          "snippet": "\nexport function createRouter() {\n  const routes = [",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:33b90e9d2f630b84:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.9,
+        "width": 2
+      },
+      "metadata": {
+        "coverageEligible": false
+      }
+    },
+    {
+      "id": "edge:4ad252614bfe2be1",
+      "subject": "module:.",
+      "object": "package:vue",
+      "from": "module:.",
+      "to": "package:vue",
+      "predicate": "depends-on",
+      "kind": "depends-on",
+      "label": "depends on",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:4ad252614bfe2be1:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "scope": "runtime",
+        "version": "^3.4.0"
+      }
+    },
+    {
+      "id": "edge:6bc37f0c338aed8b",
+      "subject": "module:.",
+      "object": "package:vue-router",
+      "from": "module:.",
+      "to": "package:vue-router",
+      "predicate": "depends-on",
+      "kind": "depends-on",
+      "label": "depends on",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:6bc37f0c338aed8b:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "scope": "runtime",
+        "version": "^4.3.0"
+      }
+    },
+    {
+      "id": "edge:3281c3fd14fb7507",
+      "subject": "module:.",
+      "object": "package:axios",
+      "from": "module:.",
+      "to": "package:axios",
+      "predicate": "depends-on",
+      "kind": "depends-on",
+      "label": "depends on",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:3281c3fd14fb7507:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "scope": "runtime",
+        "version": "^1.6.0"
+      }
+    },
+    {
+      "id": "edge:7b1681102d8fdfdc",
+      "subject": "module:.",
+      "object": "package:vite",
+      "from": "module:.",
+      "to": "package:vite",
+      "predicate": "depends-on",
+      "kind": "depends-on",
+      "label": "depends on",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:7b1681102d8fdfdc:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "scope": "dev",
+        "version": "^5.0.0"
+      }
+    },
+    {
+      "id": "edge:1eff93c4936f9aab",
+      "subject": "module:.",
+      "object": "package:typescript",
+      "from": "module:.",
+      "to": "package:typescript",
+      "predicate": "depends-on",
+      "kind": "depends-on",
+      "label": "depends on",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:1eff93c4936f9aab:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "scope": "dev",
+        "version": "^5.4.0"
+      }
+    },
+    {
+      "id": "edge:a8d65b181b8ae857",
+      "subject": "file:src/api.ts",
+      "object": "file:src/request.ts",
+      "from": "file:src/api.ts",
+      "to": "file:src/request.ts",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { request } from './request'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:a8d65b181b8ae857:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "./request",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:beb3c8ab729f9c5f",
+      "subject": "file:src/components/GuardedButton.ts",
+      "object": "file:src/auth.ts",
+      "from": "file:src/components/GuardedButton.ts",
+      "to": "file:src/auth.ts",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { canAccessAdmin } from '../auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:beb3c8ab729f9c5f:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "../auth",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:43a026437376f2db",
+      "subject": "file:src/main.ts",
+      "object": "file:src/router.ts",
+      "from": "file:src/main.ts",
+      "to": "file:src/router.ts",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:43a026437376f2db:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "./router",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:9d7208b4aa01d335",
+      "subject": "file:src/main.ts",
+      "object": "file:src/auth.ts",
+      "from": "file:src/main.ts",
+      "to": "file:src/auth.ts",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:9d7208b4aa01d335:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "./auth",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:3aa6b5fc85b045b2",
+      "subject": "file:src/main.ts",
+      "object": "file:src/api.ts",
+      "from": "file:src/main.ts",
+      "to": "file:src/api.ts",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:3aa6b5fc85b045b2:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "./api",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:391d59734327a3b2",
+      "subject": "file:src/router.ts",
+      "object": "file:src/views/HomePage.vue",
+      "from": "file:src/router.ts",
+      "to": "file:src/views/HomePage.vue",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:391d59734327a3b2:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "./views/HomePage.vue",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:8cacdfc7c4e34914",
+      "subject": "file:src/router.ts",
+      "object": "file:src/views/AdminPage.vue",
+      "from": "file:src/router.ts",
+      "to": "file:src/views/AdminPage.vue",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:8cacdfc7c4e34914:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "./views/AdminPage.vue",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:e21293e08ddd51f3",
+      "subject": "file:src/router.ts",
+      "object": "file:src/auth.ts",
+      "from": "file:src/router.ts",
+      "to": "file:src/auth.ts",
+      "predicate": "imports",
+      "kind": "imports",
+      "label": "imports",
+      "confidence": 0.95,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:e21293e08ddd51f3:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.95,
+        "width": 2
+      },
+      "metadata": {
+        "target": "./auth",
+        "resolved": true
+      }
+    },
+    {
+      "id": "edge:afde7a9e18eee0bf",
+      "subject": "route:ANY:",
+      "object": "file:src/router.ts",
+      "from": "route:ANY:",
+      "to": "file:src/router.ts",
+      "predicate": "routes-to",
+      "kind": "routes-to",
+      "label": "routes to",
+      "confidence": 0.9,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 6,
+          "endLine": 8,
+          "snippet": "  const routes = [\n    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:afde7a9e18eee0bf:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.9,
+        "width": 2
+      },
+      "metadata": {
+        "routePath": "/"
+      }
+    },
+    {
+      "id": "edge:67ff75af32c717a2",
+      "subject": "route:ANY:-admin",
+      "object": "file:src/router.ts",
+      "from": "route:ANY:-admin",
+      "to": "file:src/router.ts",
+      "predicate": "routes-to",
+      "kind": "routes-to",
+      "label": "routes to",
+      "confidence": 0.9,
+      "source": "static",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 7,
+          "endLine": 9,
+          "snippet": "    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },\n  ]",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        }
+      ],
+      "evidenceRefs": [
+        "evidence:edge:67ff75af32c717a2:0"
+      ],
+      "style": {
+        "variant": "solid",
+        "opacity": 0.9,
+        "width": 2
+      },
+      "metadata": {
+        "routePath": "/admin"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "id": "group:module:.",
+      "nodeId": "module:.",
+      "label": "mini-repo",
+      "path": ".",
+      "nodes": [
+        "module:.",
+        "module:src",
+        "module:public",
+        "config:tsconfig.json",
+        "route:ANY:",
+        "route:ANY:-admin",
+        "file:src/router.ts",
+        "file:src/auth.ts",
+        "file:src/api.ts",
+        "file:src/request.ts",
+        "file:src/main.ts",
+        "file:src/views/AdminPage.vue",
+        "file:src/views/HomePage.vue",
+        "file:src/components/GuardedButton.ts",
+        "file:tsconfig.json",
+        "file:.env",
+        "file:package.json",
+        "file:public/index.html",
+        "file:README.md",
+        "file:src/mock/routes.ts",
+        "file:src/store.ts",
+        "file:src/styles/app.css",
+        "symbol:src-api.ts:function:fetchInvoice",
+        "symbol:src-auth.ts:function:canAccessAdmin",
+        "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+        "symbol:src-request.ts:function:request",
+        "symbol:src-router.ts:function:createRouter"
+      ]
+    },
+    {
+      "id": "group:module:src",
+      "nodeId": "module:src",
+      "label": "src",
+      "path": "src",
+      "nodes": [
+        "module:src",
+        "route:ANY:",
+        "route:ANY:-admin",
+        "file:src/router.ts",
+        "file:src/auth.ts",
+        "file:src/api.ts",
+        "file:src/request.ts",
+        "file:src/main.ts",
+        "file:src/views/AdminPage.vue",
+        "file:src/views/HomePage.vue",
+        "file:src/components/GuardedButton.ts",
+        "file:src/mock/routes.ts",
+        "file:src/store.ts",
+        "file:src/styles/app.css",
+        "symbol:src-api.ts:function:fetchInvoice",
+        "symbol:src-auth.ts:function:canAccessAdmin",
+        "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+        "symbol:src-request.ts:function:request",
+        "symbol:src-router.ts:function:createRouter"
+      ]
+    },
+    {
+      "id": "group:module:public",
+      "nodeId": "module:public",
+      "label": "public",
+      "path": "public",
+      "nodes": [
+        "module:public",
+        "file:public/index.html"
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "id": "group:module:.",
+      "kind": "module-group",
+      "label": "mini-repo",
+      "nodeIds": [
+        "module:.",
+        "module:src",
+        "module:public",
+        "config:tsconfig.json",
+        "route:ANY:",
+        "route:ANY:-admin",
+        "file:src/router.ts",
+        "file:src/auth.ts",
+        "file:src/api.ts",
+        "file:src/request.ts",
+        "file:src/main.ts",
+        "file:src/views/AdminPage.vue",
+        "file:src/views/HomePage.vue",
+        "file:src/components/GuardedButton.ts",
+        "file:tsconfig.json",
+        "file:.env",
+        "file:package.json",
+        "file:public/index.html",
+        "file:README.md",
+        "file:src/mock/routes.ts",
+        "file:src/store.ts",
+        "file:src/styles/app.css",
+        "symbol:src-api.ts:function:fetchInvoice",
+        "symbol:src-auth.ts:function:canAccessAdmin",
+        "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+        "symbol:src-request.ts:function:request",
+        "symbol:src-router.ts:function:createRouter"
+      ]
+    },
+    {
+      "id": "group:module:src",
+      "kind": "module-group",
+      "label": "src",
+      "nodeIds": [
+        "module:src",
+        "route:ANY:",
+        "route:ANY:-admin",
+        "file:src/router.ts",
+        "file:src/auth.ts",
+        "file:src/api.ts",
+        "file:src/request.ts",
+        "file:src/main.ts",
+        "file:src/views/AdminPage.vue",
+        "file:src/views/HomePage.vue",
+        "file:src/components/GuardedButton.ts",
+        "file:src/mock/routes.ts",
+        "file:src/store.ts",
+        "file:src/styles/app.css",
+        "symbol:src-api.ts:function:fetchInvoice",
+        "symbol:src-auth.ts:function:canAccessAdmin",
+        "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+        "symbol:src-request.ts:function:request",
+        "symbol:src-router.ts:function:createRouter"
+      ]
+    },
+    {
+      "id": "group:module:public",
+      "kind": "module-group",
+      "label": "public",
+      "nodeIds": [
+        "module:public",
+        "file:public/index.html"
+      ]
+    }
+  ],
+  "views": [
+    {
+      "id": "architecture",
+      "label": "Architecture",
+      "nodeFilter": {
+        "types": [
+          "module",
+          "file",
+          "service",
+          "config",
+          "package"
+        ],
+        "minImportance": 0.04
+      },
+      "edgeFilter": {
+        "predicates": [
+          "contains",
+          "depends-on",
+          "imports",
+          "dynamic-imports",
+          "calls"
+        ],
+        "minConfidence": 0.5
+      },
+      "layoutHint": "layered"
+    },
+    {
+      "id": "route-map",
+      "label": "Route Map",
+      "nodeFilter": {
+        "types": [
+          "route",
+          "file",
+          "service"
+        ]
+      },
+      "edgeFilter": {
+        "predicates": [
+          "routes-to",
+          "calls"
+        ],
+        "minConfidence": 0.5
+      },
+      "layoutHint": "tree"
+    },
+    {
+      "id": "data-flow",
+      "label": "Data Flow",
+      "nodeFilter": {
+        "types": [
+          "file",
+          "service",
+          "datastore"
+        ]
+      },
+      "edgeFilter": {
+        "predicates": [
+          "calls",
+          "reads-from",
+          "writes-to"
+        ],
+        "minConfidence": 0.5
+      },
+      "layoutHint": "layered"
+    },
+    {
+      "id": "auth-map",
+      "label": "Auth Map",
+      "nodeFilter": {
+        "types": [
+          "file",
+          "config",
+          "service"
+        ],
+        "tags": [
+          "auth",
+          "security"
+        ]
+      },
+      "edgeFilter": {
+        "predicates": [
+          "guarded-by"
+        ],
+        "minConfidence": 0.5
+      },
+      "layoutHint": "force"
+    }
+  ],
+  "drilldown": {
+    "module:.": {
+      "kind": "node",
+      "nodeId": "module:.",
+      "label": "mini-repo",
+      "path": ".",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": ".env",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "package.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "README.md",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "tsconfig.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:1381ad5348cc2846",
+        "edge:8defd200e899b66c",
+        "edge:551a0cb7a03a32ca",
+        "edge:806a14a739497718",
+        "edge:1fcbf1696ee4a3c3",
+        "edge:807ae6aee51ef5a5",
+        "edge:4ad252614bfe2be1",
+        "edge:6bc37f0c338aed8b",
+        "edge:3281c3fd14fb7507",
+        "edge:7b1681102d8fdfdc",
+        "edge:1eff93c4936f9aab"
+      ]
+    },
+    "module:src": {
+      "kind": "node",
+      "nodeId": "module:src",
+      "label": "src",
+      "path": "src",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/auth.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/components/GuardedButton.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/main.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/mock/routes.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/request.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/store.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/styles/app.css",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/views/AdminPage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/views/HomePage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:1381ad5348cc2846",
+        "edge:305cf456021f3804",
+        "edge:6572ae3bd3673586",
+        "edge:98f69e8a7e269ef1",
+        "edge:9af9ac50e181280e",
+        "edge:93c5966f0738acdc",
+        "edge:e35e4536856a1241",
+        "edge:5eb9aaed4bb9742a",
+        "edge:0422eab9b414d45f",
+        "edge:76df40a9f825b00b",
+        "edge:44588463b4e7c962",
+        "edge:d2c14c03d3160a9b"
+      ]
+    },
+    "module:public": {
+      "kind": "node",
+      "nodeId": "module:public",
+      "label": "public",
+      "path": "public",
+      "evidence": [
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:8defd200e899b66c",
+        "edge:552de7342ca80389"
+      ]
+    },
+    "config:tsconfig.json": {
+      "kind": "node",
+      "nodeId": "config:tsconfig.json",
+      "label": "tsconfig.json",
+      "path": "tsconfig.json",
+      "evidence": [
+        {
+          "file": "tsconfig.json",
+          "tool": "config-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:6ac976c4c51ee7df"
+      ]
+    },
+    "route:ANY:": {
+      "kind": "node",
+      "nodeId": "route:ANY:",
+      "label": "/",
+      "path": "src/router.ts",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 6,
+          "endLine": 8,
+          "snippet": "  const routes = [\n    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:afde7a9e18eee0bf"
+      ]
+    },
+    "route:ANY:-admin": {
+      "kind": "node",
+      "nodeId": "route:ANY:-admin",
+      "label": "/admin",
+      "path": "src/router.ts",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 7,
+          "endLine": 9,
+          "snippet": "    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },\n  ]",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:67ff75af32c717a2"
+      ]
+    },
+    "file:src/router.ts": {
+      "kind": "node",
+      "nodeId": "file:src/router.ts",
+      "label": "router.ts",
+      "path": "src/router.ts",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 4,
+          "endLine": 6,
+          "snippet": "\nexport function createRouter() {\n  const routes = [",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        },
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 6,
+          "endLine": 8,
+          "snippet": "  const routes = [\n    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        },
+        {
+          "file": "src/router.ts",
+          "line": 7,
+          "endLine": 9,
+          "snippet": "    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },\n  ]",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:5eb9aaed4bb9742a",
+        "edge:33b90e9d2f630b84",
+        "edge:43a026437376f2db",
+        "edge:391d59734327a3b2",
+        "edge:8cacdfc7c4e34914",
+        "edge:e21293e08ddd51f3",
+        "edge:afde7a9e18eee0bf",
+        "edge:67ff75af32c717a2"
+      ]
+    },
+    "file:src/auth.ts": {
+      "kind": "node",
+      "nodeId": "file:src/auth.ts",
+      "label": "auth.ts",
+      "path": "src/auth.ts",
+      "evidence": [
+        {
+          "file": "src/auth.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/auth.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function canAccessAdmin(permissionIds: string[]) {\n  return permissionIds.includes('admin')",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        },
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { canAccessAdmin } from '../auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:6572ae3bd3673586",
+        "edge:131a5b510d52d364",
+        "edge:beb3c8ab729f9c5f",
+        "edge:9d7208b4aa01d335",
+        "edge:e21293e08ddd51f3"
+      ]
+    },
+    "file:src/api.ts": {
+      "kind": "node",
+      "nodeId": "file:src/api.ts",
+      "label": "api.ts",
+      "path": "src/api.ts",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/api.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function fetchInvoice(invoiceId: string) {\n  return request(`/api/invoices/${invoiceId}`)",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        },
+        {
+          "file": "src/api.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { request } from './request'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/main.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:305cf456021f3804",
+        "edge:62104d39a2f3f36b",
+        "edge:a8d65b181b8ae857",
+        "edge:3aa6b5fc85b045b2"
+      ]
+    },
+    "file:src/request.ts": {
+      "kind": "node",
+      "nodeId": "file:src/request.ts",
+      "label": "request.ts",
+      "path": "src/request.ts",
+      "evidence": [
+        {
+          "file": "src/request.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/request.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function request(path: string) {\n  return {",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        },
+        {
+          "file": "src/api.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { request } from './request'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:e35e4536856a1241",
+        "edge:54854e3fc9fab0b5",
+        "edge:a8d65b181b8ae857"
+      ]
+    },
+    "file:src/main.ts": {
+      "kind": "node",
+      "nodeId": "file:src/main.ts",
+      "label": "main.ts",
+      "path": "src/main.ts",
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/main.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:9af9ac50e181280e",
+        "edge:43a026437376f2db",
+        "edge:9d7208b4aa01d335",
+        "edge:3aa6b5fc85b045b2"
+      ]
+    },
+    "file:src/views/AdminPage.vue": {
+      "kind": "node",
+      "nodeId": "file:src/views/AdminPage.vue",
+      "label": "AdminPage.vue",
+      "path": "src/views/AdminPage.vue",
+      "evidence": [
+        {
+          "file": "src/views/AdminPage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:44588463b4e7c962",
+        "edge:8cacdfc7c4e34914"
+      ]
+    },
+    "file:src/views/HomePage.vue": {
+      "kind": "node",
+      "nodeId": "file:src/views/HomePage.vue",
+      "label": "HomePage.vue",
+      "path": "src/views/HomePage.vue",
+      "evidence": [
+        {
+          "file": "src/views/HomePage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:d2c14c03d3160a9b",
+        "edge:391d59734327a3b2"
+      ]
+    },
+    "file:src/components/GuardedButton.ts": {
+      "kind": "node",
+      "nodeId": "file:src/components/GuardedButton.ts",
+      "label": "GuardedButton.ts",
+      "path": "src/components/GuardedButton.ts",
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function GuardedButton(permissionIds: string[]) {\n  return canAccessAdmin(permissionIds) ? 'enabled' : 'disabled'",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        },
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { canAccessAdmin } from '../auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:98f69e8a7e269ef1",
+        "edge:2642f866d6008d97",
+        "edge:beb3c8ab729f9c5f"
+      ]
+    },
+    "file:tsconfig.json": {
+      "kind": "node",
+      "nodeId": "file:tsconfig.json",
+      "label": "tsconfig.json",
+      "path": "tsconfig.json",
+      "evidence": [
+        {
+          "file": "tsconfig.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        },
+        {
+          "file": "tsconfig.json",
+          "tool": "config-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:807ae6aee51ef5a5",
+        "edge:6ac976c4c51ee7df"
+      ]
+    },
+    "file:.env": {
+      "kind": "node",
+      "nodeId": "file:.env",
+      "label": ".env",
+      "path": ".env",
+      "evidence": [
+        {
+          "file": ".env",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:551a0cb7a03a32ca"
+      ]
+    },
+    "file:package.json": {
+      "kind": "node",
+      "nodeId": "file:package.json",
+      "label": "package.json",
+      "path": "package.json",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:806a14a739497718"
+      ]
+    },
+    "file:public/index.html": {
+      "kind": "node",
+      "nodeId": "file:public/index.html",
+      "label": "index.html",
+      "path": "public/index.html",
+      "evidence": [
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:552de7342ca80389"
+      ]
+    },
+    "file:README.md": {
+      "kind": "node",
+      "nodeId": "file:README.md",
+      "label": "README.md",
+      "path": "README.md",
+      "evidence": [
+        {
+          "file": "README.md",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:1fcbf1696ee4a3c3"
+      ]
+    },
+    "file:src/mock/routes.ts": {
+      "kind": "node",
+      "nodeId": "file:src/mock/routes.ts",
+      "label": "routes.ts",
+      "path": "src/mock/routes.ts",
+      "evidence": [
+        {
+          "file": "src/mock/routes.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:93c5966f0738acdc"
+      ]
+    },
+    "file:src/store.ts": {
+      "kind": "node",
+      "nodeId": "file:src/store.ts",
+      "label": "store.ts",
+      "path": "src/store.ts",
+      "evidence": [
+        {
+          "file": "src/store.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:0422eab9b414d45f"
+      ]
+    },
+    "file:src/styles/app.css": {
+      "kind": "node",
+      "nodeId": "file:src/styles/app.css",
+      "label": "app.css",
+      "path": "src/styles/app.css",
+      "evidence": [
+        {
+          "file": "src/styles/app.css",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:76df40a9f825b00b"
+      ]
+    },
+    "package:axios": {
+      "kind": "node",
+      "nodeId": "package:axios",
+      "label": "axios",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:3281c3fd14fb7507"
+      ]
+    },
+    "package:typescript": {
+      "kind": "node",
+      "nodeId": "package:typescript",
+      "label": "typescript",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:1eff93c4936f9aab"
+      ]
+    },
+    "package:vite": {
+      "kind": "node",
+      "nodeId": "package:vite",
+      "label": "vite",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:7b1681102d8fdfdc"
+      ]
+    },
+    "package:vue": {
+      "kind": "node",
+      "nodeId": "package:vue",
+      "label": "vue",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:4ad252614bfe2be1"
+      ]
+    },
+    "package:vue-router": {
+      "kind": "node",
+      "nodeId": "package:vue-router",
+      "label": "vue-router",
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ],
+      "edges": [
+        "edge:6bc37f0c338aed8b"
+      ]
+    },
+    "symbol:src-api.ts:function:fetchInvoice": {
+      "kind": "node",
+      "nodeId": "symbol:src-api.ts:function:fetchInvoice",
+      "label": "fetchInvoice",
+      "path": "src/api.ts",
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function fetchInvoice(invoiceId: string) {\n  return request(`/api/invoices/${invoiceId}`)",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:62104d39a2f3f36b"
+      ]
+    },
+    "symbol:src-auth.ts:function:canAccessAdmin": {
+      "kind": "node",
+      "nodeId": "symbol:src-auth.ts:function:canAccessAdmin",
+      "label": "canAccessAdmin",
+      "path": "src/auth.ts",
+      "evidence": [
+        {
+          "file": "src/auth.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function canAccessAdmin(permissionIds: string[]) {\n  return permissionIds.includes('admin')",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:131a5b510d52d364"
+      ]
+    },
+    "symbol:src-components-GuardedButton.ts:function:GuardedButton": {
+      "kind": "node",
+      "nodeId": "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+      "label": "GuardedButton",
+      "path": "src/components/GuardedButton.ts",
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function GuardedButton(permissionIds: string[]) {\n  return canAccessAdmin(permissionIds) ? 'enabled' : 'disabled'",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:2642f866d6008d97"
+      ]
+    },
+    "symbol:src-request.ts:function:request": {
+      "kind": "node",
+      "nodeId": "symbol:src-request.ts:function:request",
+      "label": "request",
+      "path": "src/request.ts",
+      "evidence": [
+        {
+          "file": "src/request.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function request(path: string) {\n  return {",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:54854e3fc9fab0b5"
+      ]
+    },
+    "symbol:src-router.ts:function:createRouter": {
+      "kind": "node",
+      "nodeId": "symbol:src-router.ts:function:createRouter",
+      "label": "createRouter",
+      "path": "src/router.ts",
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 4,
+          "endLine": 6,
+          "snippet": "\nexport function createRouter() {\n  const routes = [",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ],
+      "edges": [
+        "edge:33b90e9d2f630b84"
+      ]
+    },
+    "edge:1381ad5348cc2846": {
+      "kind": "edge",
+      "edgeId": "edge:1381ad5348cc2846",
+      "subject": "module:.",
+      "predicate": "contains",
+      "object": "module:src",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:8defd200e899b66c": {
+      "kind": "edge",
+      "edgeId": "edge:8defd200e899b66c",
+      "subject": "module:.",
+      "predicate": "contains",
+      "object": "module:public",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:551a0cb7a03a32ca": {
+      "kind": "edge",
+      "edgeId": "edge:551a0cb7a03a32ca",
+      "subject": "module:.",
+      "predicate": "contains",
+      "object": "file:.env",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": ".env",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:806a14a739497718": {
+      "kind": "edge",
+      "edgeId": "edge:806a14a739497718",
+      "subject": "module:.",
+      "predicate": "contains",
+      "object": "file:package.json",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:552de7342ca80389": {
+      "kind": "edge",
+      "edgeId": "edge:552de7342ca80389",
+      "subject": "module:public",
+      "predicate": "contains",
+      "object": "file:public/index.html",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "public/index.html",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:1fcbf1696ee4a3c3": {
+      "kind": "edge",
+      "edgeId": "edge:1fcbf1696ee4a3c3",
+      "subject": "module:.",
+      "predicate": "contains",
+      "object": "file:README.md",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "README.md",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:305cf456021f3804": {
+      "kind": "edge",
+      "edgeId": "edge:305cf456021f3804",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/api.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:6572ae3bd3673586": {
+      "kind": "edge",
+      "edgeId": "edge:6572ae3bd3673586",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/auth.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/auth.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:98f69e8a7e269ef1": {
+      "kind": "edge",
+      "edgeId": "edge:98f69e8a7e269ef1",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/components/GuardedButton.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:9af9ac50e181280e": {
+      "kind": "edge",
+      "edgeId": "edge:9af9ac50e181280e",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/main.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:93c5966f0738acdc": {
+      "kind": "edge",
+      "edgeId": "edge:93c5966f0738acdc",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/mock/routes.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/mock/routes.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:e35e4536856a1241": {
+      "kind": "edge",
+      "edgeId": "edge:e35e4536856a1241",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/request.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/request.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:5eb9aaed4bb9742a": {
+      "kind": "edge",
+      "edgeId": "edge:5eb9aaed4bb9742a",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/router.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:0422eab9b414d45f": {
+      "kind": "edge",
+      "edgeId": "edge:0422eab9b414d45f",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/store.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/store.ts",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:76df40a9f825b00b": {
+      "kind": "edge",
+      "edgeId": "edge:76df40a9f825b00b",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/styles/app.css",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/styles/app.css",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:44588463b4e7c962": {
+      "kind": "edge",
+      "edgeId": "edge:44588463b4e7c962",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/views/AdminPage.vue",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/views/AdminPage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:d2c14c03d3160a9b": {
+      "kind": "edge",
+      "edgeId": "edge:d2c14c03d3160a9b",
+      "subject": "module:src",
+      "predicate": "contains",
+      "object": "file:src/views/HomePage.vue",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/views/HomePage.vue",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:807ae6aee51ef5a5": {
+      "kind": "edge",
+      "edgeId": "edge:807ae6aee51ef5a5",
+      "subject": "module:.",
+      "predicate": "contains",
+      "object": "file:tsconfig.json",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "tsconfig.json",
+          "tool": "file-walker",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:6ac976c4c51ee7df": {
+      "kind": "edge",
+      "edgeId": "edge:6ac976c4c51ee7df",
+      "subject": "file:tsconfig.json",
+      "predicate": "contains",
+      "object": "config:tsconfig.json",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "tsconfig.json",
+          "tool": "config-parser",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:62104d39a2f3f36b": {
+      "kind": "edge",
+      "edgeId": "edge:62104d39a2f3f36b",
+      "subject": "file:src/api.ts",
+      "predicate": "contains",
+      "object": "symbol:src-api.ts:function:fetchInvoice",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function fetchInvoice(invoiceId: string) {\n  return request(`/api/invoices/${invoiceId}`)",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ]
+    },
+    "edge:131a5b510d52d364": {
+      "kind": "edge",
+      "edgeId": "edge:131a5b510d52d364",
+      "subject": "file:src/auth.ts",
+      "predicate": "contains",
+      "object": "symbol:src-auth.ts:function:canAccessAdmin",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "file": "src/auth.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function canAccessAdmin(permissionIds: string[]) {\n  return permissionIds.includes('admin')",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ]
+    },
+    "edge:2642f866d6008d97": {
+      "kind": "edge",
+      "edgeId": "edge:2642f866d6008d97",
+      "subject": "file:src/components/GuardedButton.ts",
+      "predicate": "contains",
+      "object": "symbol:src-components-GuardedButton.ts:function:GuardedButton",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "\nexport function GuardedButton(permissionIds: string[]) {\n  return canAccessAdmin(permissionIds) ? 'enabled' : 'disabled'",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ]
+    },
+    "edge:54854e3fc9fab0b5": {
+      "kind": "edge",
+      "edgeId": "edge:54854e3fc9fab0b5",
+      "subject": "file:src/request.ts",
+      "predicate": "contains",
+      "object": "symbol:src-request.ts:function:request",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "file": "src/request.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "export function request(path: string) {\n  return {",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ]
+    },
+    "edge:33b90e9d2f630b84": {
+      "kind": "edge",
+      "edgeId": "edge:33b90e9d2f630b84",
+      "subject": "file:src/router.ts",
+      "predicate": "contains",
+      "object": "symbol:src-router.ts:function:createRouter",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 4,
+          "endLine": 6,
+          "snippet": "\nexport function createRouter() {\n  const routes = [",
+          "tool": "symbol-scanner",
+          "rawConfidence": 0.9
+        }
+      ]
+    },
+    "edge:4ad252614bfe2be1": {
+      "kind": "edge",
+      "edgeId": "edge:4ad252614bfe2be1",
+      "subject": "module:.",
+      "predicate": "depends-on",
+      "object": "package:vue",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:6bc37f0c338aed8b": {
+      "kind": "edge",
+      "edgeId": "edge:6bc37f0c338aed8b",
+      "subject": "module:.",
+      "predicate": "depends-on",
+      "object": "package:vue-router",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:3281c3fd14fb7507": {
+      "kind": "edge",
+      "edgeId": "edge:3281c3fd14fb7507",
+      "subject": "module:.",
+      "predicate": "depends-on",
+      "object": "package:axios",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:7b1681102d8fdfdc": {
+      "kind": "edge",
+      "edgeId": "edge:7b1681102d8fdfdc",
+      "subject": "module:.",
+      "predicate": "depends-on",
+      "object": "package:vite",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:1eff93c4936f9aab": {
+      "kind": "edge",
+      "edgeId": "edge:1eff93c4936f9aab",
+      "subject": "module:.",
+      "predicate": "depends-on",
+      "object": "package:typescript",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "package.json",
+          "tool": "manifest-parser",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:a8d65b181b8ae857": {
+      "kind": "edge",
+      "edgeId": "edge:a8d65b181b8ae857",
+      "subject": "file:src/api.ts",
+      "predicate": "imports",
+      "object": "file:src/request.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/api.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { request } from './request'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:beb3c8ab729f9c5f": {
+      "kind": "edge",
+      "edgeId": "edge:beb3c8ab729f9c5f",
+      "subject": "file:src/components/GuardedButton.ts",
+      "predicate": "imports",
+      "object": "file:src/auth.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/components/GuardedButton.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { canAccessAdmin } from '../auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:43a026437376f2db": {
+      "kind": "edge",
+      "edgeId": "edge:43a026437376f2db",
+      "subject": "file:src/main.ts",
+      "predicate": "imports",
+      "object": "file:src/router.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:9d7208b4aa01d335": {
+      "kind": "edge",
+      "edgeId": "edge:9d7208b4aa01d335",
+      "subject": "file:src/main.ts",
+      "predicate": "imports",
+      "object": "file:src/auth.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import { createRouter } from './router'\nimport { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:3aa6b5fc85b045b2": {
+      "kind": "edge",
+      "edgeId": "edge:3aa6b5fc85b045b2",
+      "subject": "file:src/main.ts",
+      "predicate": "imports",
+      "object": "file:src/api.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/main.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import { canAccessAdmin } from './auth'\nimport { fetchInvoice } from './api'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:391d59734327a3b2": {
+      "kind": "edge",
+      "edgeId": "edge:391d59734327a3b2",
+      "subject": "file:src/router.ts",
+      "predicate": "imports",
+      "object": "file:src/views/HomePage.vue",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 2,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:8cacdfc7c4e34914": {
+      "kind": "edge",
+      "edgeId": "edge:8cacdfc7c4e34914",
+      "subject": "file:src/router.ts",
+      "predicate": "imports",
+      "object": "file:src/views/AdminPage.vue",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 1,
+          "endLine": 3,
+          "snippet": "import HomePage from './views/HomePage.vue'\nimport AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:e21293e08ddd51f3": {
+      "kind": "edge",
+      "edgeId": "edge:e21293e08ddd51f3",
+      "subject": "file:src/router.ts",
+      "predicate": "imports",
+      "object": "file:src/auth.ts",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 2,
+          "endLine": 4,
+          "snippet": "import AdminPage from './views/AdminPage.vue'\nimport { canAccessAdmin } from './auth'\n",
+          "tool": "js-import",
+          "rawConfidence": 0.95
+        }
+      ]
+    },
+    "edge:afde7a9e18eee0bf": {
+      "kind": "edge",
+      "edgeId": "edge:afde7a9e18eee0bf",
+      "subject": "route:ANY:",
+      "predicate": "routes-to",
+      "object": "file:src/router.ts",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 6,
+          "endLine": 8,
+          "snippet": "  const routes = [\n    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        }
+      ]
+    },
+    "edge:67ff75af32c717a2": {
+      "kind": "edge",
+      "edgeId": "edge:67ff75af32c717a2",
+      "subject": "route:ANY:-admin",
+      "predicate": "routes-to",
+      "object": "file:src/router.ts",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "file": "src/router.ts",
+          "line": 7,
+          "endLine": 9,
+          "snippet": "    { path: '/', component: HomePage },\n    { path: '/admin', component: AdminPage, beforeEnter: () => canAccessAdmin(['admin']) },\n  ]",
+          "tool": "route-hint-parser",
+          "rawConfidence": 0.9
+        }
+      ]
+    }
+  },
+  "checks": {
+    "passed": true,
+    "issues": [],
+    "warnings": []
+  }
+}

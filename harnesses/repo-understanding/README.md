@@ -16,7 +16,7 @@ repo
   -> L1 scanner: inventory + code-map + static facts + gap queue
   -> L2 explorer: structured facts[] + openQuestions[] from gap tasks
   -> L3 merger: schema checks + entity alignment + confidence merge + adversarial verification
-  -> L4 projector: wiki/ + render-graph.json + knowledge-index.jsonl
+  -> L4 projector: wiki/ + human-readable.html + render-graph.json + knowledge-index.jsonl
 ```
 
 The harness keeps Codex as the runtime for L2. It does not silently spawn agents. It generates an exploration request, accepts structured JSON back, fetches safe evidence, and merges facts into the graph.

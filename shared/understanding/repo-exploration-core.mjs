@@ -6,6 +6,10 @@ import {
   buildRequestForPackage,
 } from './repo-understanding-core.mjs'
 import { refreshHarnessArtifactsForPackage } from './fact-graph-harness.mjs'
+import {
+  factExplorerNames,
+  validPredicateSet,
+} from './harness-registry.mjs'
 
 const SECRET_VALUE_PATTERN = /(api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|credential|passwd|password|private[_-]?key|secret|token)\s*[:=]/i
 
@@ -16,7 +20,8 @@ const DEFAULT_LIMITS = {
   contextLines: 1,
 }
 
-const VALID_PREDICATES = new Set(['imports', 'dynamic-imports', 'contains', 'depends-on', 'routes-to', 'registers', 'calls', 'guarded-by', 'reads-from', 'writes-to', 'extends', 'implements'])
+const VALID_PREDICATES = validPredicateSet()
+const VALID_FACT_EXPLORERS = factExplorerNames()
 const VALID_SOURCES = new Set(['dynamic', 'inferred'])
 
 export function buildExplorationRequestForPackage(packageDir) {
@@ -192,12 +197,12 @@ function renderExplorationRequest({ inventory, codeMap, gapQueue, renderGraph, k
       {
         subject: 'file:src/router/index.ts or relative/path or structured node',
         subjectType: 'file|module|symbol|route|package|service|config|datastore',
-        predicate: 'imports|dynamic-imports|contains|depends-on|routes-to|registers|calls|guarded-by|reads-from|writes-to|extends|implements',
+        predicate: [...VALID_PREDICATES].join('|'),
         object: 'route:/orders or relative/path or structured node',
         objectType: 'file|module|symbol|route|package|service|config|datastore',
         source: 'dynamic|inferred',
         confidence: 0.7,
-        explorer: 'route-binding|call-chain|auth-chain|data-access|vue-containment|dynamic-import',
+        explorer: VALID_FACT_EXPLORERS.join('|'),
         evidence: [
           { file: 'relative/path', line: 1, endLine: 3, snippet: 'optional <=3 lines', tool: 'repo-explorer', rawConfidence: 0.7 },
         ],
