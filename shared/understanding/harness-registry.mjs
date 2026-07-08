@@ -1,6 +1,6 @@
 // Registry boundary: this module defines extension-axis nodes and derived data.
 // Runtime tuning still belongs in harness.config.json explorers entries, where
-// enabled and tokenBudget may override these structural defaults.
+// enabled, tokenBudget, and effort may override these structural defaults.
 
 export const EXPLORER = Object.freeze({
   vueContainment: 'vue-containment',
@@ -13,11 +13,14 @@ export const EXPLORER = Object.freeze({
   coverageDirected: 'coverage-directed',
 })
 
+export const EFFORT_LEVELS = Object.freeze(['low', 'medium', 'high'])
+
 export const EXPLORERS = Object.freeze({
   [EXPLORER.vueContainment]: {
     kind: 'path-routed',
     pathPattern: /\.vue$|components?|views?|pages?/i,
     tokenBudget: 12000,
+    effort: 'low',
     label: 'Vue 结构',
     inFactEnum: true,
   },
@@ -25,6 +28,7 @@ export const EXPLORERS = Object.freeze({
     kind: 'path-routed',
     pathPattern: /route|router|controller|mapping/i,
     tokenBudget: 12000,
+    effort: 'low',
     label: '路由绑定',
     inFactEnum: true,
   },
@@ -32,6 +36,7 @@ export const EXPLORERS = Object.freeze({
     kind: 'path-routed',
     pathPattern: /auth|security|permission|filter|interceptor|guard/i,
     tokenBudget: 14000,
+    effort: 'high',
     label: '权限链路',
     inFactEnum: true,
   },
@@ -39,6 +44,7 @@ export const EXPLORERS = Object.freeze({
     kind: 'path-routed',
     pathPattern: /dao|mapper|repository|entity|sql|datasource|redis|cache/i,
     tokenBudget: 16000,
+    effort: 'medium',
     label: '数据访问',
     inFactEnum: true,
   },
@@ -46,24 +52,28 @@ export const EXPLORERS = Object.freeze({
     kind: 'path-routed',
     pathPattern: /client|facade|rpc|http|mq|kafka|rocket|queue|consumer|producer/i,
     tokenBudget: 18000,
+    effort: 'high',
     label: '调用链路',
     inFactEnum: true,
   },
   [EXPLORER.dynamicImport]: {
     kind: 'system',
     tokenBudget: 10000,
+    effort: 'low',
     label: '动态导入',
     inFactEnum: true,
   },
   [EXPLORER.adversarialVerify]: {
     kind: 'system',
     tokenBudget: 8000,
+    effort: 'high',
     label: '反向验证',
     inFactEnum: false,
   },
   [EXPLORER.coverageDirected]: {
     kind: 'system',
     tokenBudget: 10000,
+    effort: 'medium',
     label: '覆盖导向',
     inFactEnum: false,
   },
@@ -96,6 +106,12 @@ export function assertKnownExplorers(config = {}, label = 'explorers config') {
   if (unknown.length) {
     throw new Error(`${label} contains unknown explorer(s): ${unknown.join(', ')}`)
   }
+  const invalidEfforts = Object.entries(config || {})
+    .filter(([name, value]) => EXPLORERS[name] && value?.effort !== undefined && !EFFORT_LEVELS.includes(value.effort))
+    .map(([name, value]) => `${name}=${String(value.effort)}`)
+  if (invalidEfforts.length) {
+    throw new Error(`${label} contains invalid effort override(s): ${invalidEfforts.join(', ')}`)
+  }
 }
 
 export function explorerEnabled(name, config = {}) {
@@ -106,6 +122,12 @@ export function explorerBudget(name, config = {}) {
   const override = Number(config?.[name]?.tokenBudget)
   if (Number.isFinite(override) && override > 0) return override
   return EXPLORERS[name]?.tokenBudget || EXPLORERS[EXPLORER.coverageDirected].tokenBudget
+}
+
+export function explorerEffort(name, config = {}) {
+  const override = config?.[name]?.effort
+  if (EFFORT_LEVELS.includes(override)) return override
+  return EXPLORERS[name]?.effort || 'medium'
 }
 
 export function pickExplorerForPath(filePath) {

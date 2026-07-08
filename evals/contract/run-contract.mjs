@@ -6,9 +6,11 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  EFFORT_LEVELS,
   EXPLORERS,
   PREDICATES,
   PROJECTIONS,
+  explorerEffort,
 } from '../../shared/understanding/harness-registry.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -37,6 +39,7 @@ try {
   assert(dispatch.round >= 1, 'dispatch round should be >= 1')
   assert(Array.isArray(dispatch.explorers), 'dispatch explorers should be an array')
   assert(dispatch.manifestPath && fs.existsSync(dispatch.manifestPath), 'dispatch manifestPath should exist')
+  assertDispatchEffortInManifest(dispatch)
 
   assertExplorerOutputSchema()
   assertVerificationSchema()
@@ -309,6 +312,9 @@ try {
       'registry:readme-projections',
       'registry:default-mini-repo-golden',
       'registry:disabled-explorer',
+      'registry:effort-complete',
+      'registry:effort-config-override',
+      'dispatch:effort-in-manifest',
       'project:html',
       'nextAction:dispatch',
       'nextAction:synthesize',
@@ -364,12 +370,33 @@ function assertVerificationSchema() {
 
 function assertRegistryContracts(packageDir) {
   assertRegistryConsumerWiring()
+  assertRegistryEffortComplete()
   assertExplorerProtocolAnchors()
   assertReadmeProjectionOutputs()
   assertHarnessConfigExplorerKeys()
   assertMiniRepoRegistryGolden(packageDir)
   assertDisabledExplorerBehavior(packageDir)
   assertUnknownExplorerConfigFails(packageDir)
+  assertEffortConfigOverride(packageDir)
+}
+
+function assertRegistryEffortComplete() {
+  for (const [name, explorer] of Object.entries(EXPLORERS)) {
+    assertIncludes(EFFORT_LEVELS, explorer.effort, `registry effort for ${name}`)
+    assertEqual(explorerEffort(name), explorer.effort, `explorerEffort default for ${name}`)
+  }
+  assertEqual(explorerEffort('missing-explorer'), 'medium', 'explorerEffort fallback')
+}
+
+function assertDispatchEffortInManifest(dispatch) {
+  assert(dispatch.explorers.length > 0, 'dispatch should produce at least one bundle for effort contract')
+  for (const bundle of dispatch.explorers) {
+    assertIncludes(EFFORT_LEVELS, bundle.effort, `dispatch effort for ${bundle.explorer}`)
+    assertEqual(bundle.effort, explorerEffort(bundle.explorer), `dispatch effort registry default for ${bundle.explorer}`)
+    assert(bundle.promptPath && fs.existsSync(bundle.promptPath), `dispatch promptPath exists for ${bundle.explorer}`)
+    const prompt = fs.readFileSync(bundle.promptPath, 'utf8')
+    assert(prompt.includes(`Effort: \`${bundle.effort}\``), `dispatch prompt must include effort for ${bundle.explorer}`)
+  }
 }
 
 function assertRegistryConsumerWiring() {
@@ -476,6 +503,34 @@ function assertUnknownExplorerConfigFails(packageDir) {
     return config
   }, () => {
     runHarness(['status', '--package', packageDir], { expectExit: 1 })
+  })
+}
+
+function assertEffortConfigOverride(packageDir) {
+  const effortPackage = copyFixture(packageDir, 'registry-effort-package')
+  const gapQueue = readJson(path.join(effortPackage, 'gap-queue.json'))
+  const taskExplorer = (gapQueue.tasks || [])
+    .map(task => task.explorer)
+    .find(name => EXPLORERS[name] && explorerEffort(name) !== 'high')
+  assert(taskExplorer, 'fixture should have at least one non-high explorer task for effort override contract')
+
+  withTemporaryHarnessConfig(config => {
+    config.explorers = { ...(config.explorers || {}) }
+    config.explorers[taskExplorer] = { ...(config.explorers[taskExplorer] || {}), effort: 'high' }
+    return config
+  }, () => {
+    const dispatch = runHarnessJson(['dispatch', '--package', effortPackage, '--max-tasks', '40', '--explorers', taskExplorer])
+    const bundle = dispatch.explorers.find(item => item.explorer === taskExplorer)
+    assert(bundle, `effort override dispatch should include ${taskExplorer}`)
+    assertEqual(bundle.effort, 'high', `effort override for ${taskExplorer}`)
+  })
+
+  withTemporaryHarnessConfig(config => {
+    config.explorers = { ...(config.explorers || {}) }
+    config.explorers[taskExplorer] = { ...(config.explorers[taskExplorer] || {}), effort: 'ultra' }
+    return config
+  }, () => {
+    runHarness(['status', '--package', effortPackage], { expectExit: 1 })
   })
 }
 

@@ -20,6 +20,7 @@ import {
   EXPLORER,
   assertKnownExplorers,
   explorerEnabled,
+  explorerEffort,
   projectionNames,
 } from '../../../shared/understanding/harness-registry.mjs'
 
@@ -412,6 +413,7 @@ function createDispatchRound(packageDir, options = {}) {
       explorer: bundle.explorer,
       tasks: bundle.tasks,
       tokenBudget: bundle.tokenBudget,
+      effort: bundle.effort,
       outputPath,
       schemaPath,
       body: bundle.prompt,
@@ -422,6 +424,7 @@ function createDispatchRound(packageDir, options = {}) {
       taskIds: bundle.tasks.map(task => task.id),
       taskCount: bundle.tasks.length,
       tokenBudget: bundle.tokenBudget,
+      effort: bundle.effort,
       promptPath,
       outputPath,
       schemaPath,
@@ -1102,7 +1105,7 @@ function schemaPathForExplorer(explorer) {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../schemas', schemaName)
 }
 
-function renderDispatchBundleMarkdown({ packageDir, repo, round, explorer, tasks, tokenBudget, outputPath, schemaPath, body }) {
+function renderDispatchBundleMarkdown({ packageDir, repo, round, explorer, tasks, tokenBudget, effort, outputPath, schemaPath, body }) {
   const ingestCommand = `npm run --silent understanding:harness -- ingest --package ${JSON.stringify(packageDir)} --analysis ${JSON.stringify(outputPath)} --explorer ${explorer} --round ${round}`
   const schema = readJson(schemaPath)
   return [
@@ -1113,6 +1116,7 @@ function renderDispatchBundleMarkdown({ packageDir, repo, round, explorer, tasks
     `Package: \`${packageDir}\``,
     `Repo: \`${repo?.path || ''}\``,
     `Token budget: \`${tokenBudget}\``,
+    `Effort: \`${effort || 'medium'}\``,
     `Output JSON: \`${outputPath}\``,
     `Schema: \`${schemaPath}\``,
     '',
@@ -1232,6 +1236,7 @@ function buildExplorerDispatch(packageDir, state, maxTasks, explorerFilter = nul
       explorer,
       tasks: explorerTasks,
       tokenBudget: explorerTasks.reduce((sum, task) => sum + (task.tokenBudget || 0), 0),
+      effort: explorerEffort(explorer, explorerConfig),
       prompt: explorer === EXPLORER.adversarialVerify
         ? renderVerifierPrompt(explorerTasks, state.factGraph)
         : renderExplorerPrompt(explorer, explorerTasks, state.factGraph),

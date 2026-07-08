@@ -2,6 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { parseCommonArgs } from '../../../shared/understanding/repo-understanding-core.mjs'
+import { explorerEffort } from '../../../shared/understanding/harness-registry.mjs'
 
 function usage() {
   console.error('Usage: node harnesses/repo-understanding/scripts/build-explorer-dispatch.mjs --package /path/to/package [--max-tasks 40]')
@@ -40,6 +41,7 @@ function main() {
     taskCount: tasks.length,
     explorers: [...byExplorer.entries()].map(([explorer, explorerTasks]) => ({
       explorer,
+      effort: explorerEffort(explorer),
       tokenBudget: explorerTasks.reduce((sum, task) => sum + (task.tokenBudget || 0), 0),
       tasks: explorerTasks,
       prompt: renderExplorerPrompt(explorer, explorerTasks, factGraph),
