@@ -9,6 +9,12 @@ import {
   writeHarnessArtifacts,
 } from './fact-graph-harness.mjs'
 import { validPredicateSet } from './harness-registry.mjs'
+import {
+  REPO_SCAN_POLICY_SCHEMA,
+  REPO_SCOUT_PROFILE_SCHEMA,
+  buildRepoScoutProfile,
+  buildScanPolicy,
+} from './repo-scout-profile.mjs'
 
 export const SCHEMA = {
   inventory: 'repo-inventory/v1',
@@ -16,6 +22,8 @@ export const SCHEMA = {
   factGraph: 'repo-fact-graph/v1',
   renderGraph: 'repo-render-graph/v1',
   knowledgeIndex: 'repo-knowledge-index/v1',
+  repoProfile: REPO_SCOUT_PROFILE_SCHEMA,
+  scanPolicy: REPO_SCAN_POLICY_SCHEMA,
   explorerOutput: 'repo-explorer-output/v1',
   explorationAnalysis: 'repo-exploration-analysis/v1',
   explorationEvidenceBundle: 'repo-exploration-evidence-bundle/v1',
@@ -130,6 +138,7 @@ const TEXT_SAMPLE_BYTES = 8192
 
 const MANIFEST_NAMES = new Set([
   'Cargo.toml',
+  'composer.json',
   'Gemfile',
   'Makefile',
   'Procfile',
@@ -138,6 +147,7 @@ const MANIFEST_NAMES = new Set([
   'package.json',
   'pom.xml',
   'pyproject.toml',
+  'requirements.txt',
   'settings.gradle',
 ])
 
@@ -296,11 +306,15 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
   const codeMap = incrementalActive
     ? mergeIncrementalCodeMap(previousCodeMap, scannedCodeMap, changedPaths, deletedPaths, repo, generatedAt)
     : scannedCodeMap
+  const repoProfile = buildRepoScoutProfile({ repo, inventory, codeMap, generatedAt })
+  const scanPolicy = buildScanPolicy(repoProfile)
   codeMap.architecture = buildArchitectureView({ repo, inventory, codeMap, generatedAt })
   const harnessArtifacts = buildHarnessArtifacts({
     repo,
     inventory,
     codeMap,
+    repoProfile,
+    scanPolicy,
     snippets,
     generatedAt,
     packageDir,
@@ -310,7 +324,7 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
     incremental: incrementalActive,
   })
   const { factGraph, renderGraph, knowledgeIndex } = harnessArtifacts
-  const request = buildUnderstandingRequest({ repo, inventory, codeMap, factGraph, renderGraph, knowledgeIndex, snippets })
+  const request = buildUnderstandingRequest({ repo, inventory, codeMap, repoProfile, scanPolicy, factGraph, renderGraph, knowledgeIndex, snippets })
   const packageIndex = {
     schemaVersion: SCHEMA.package,
     generatedAt,
@@ -318,12 +332,16 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
     static: {
       inventory: 'static/inventory.json',
       codeMap: 'static/code-map.json',
+      repoProfile: 'static/repo-profile.json',
+      scanPolicy: 'static/scan-policy.json',
       renderGraph: 'static/render-graph.json',
       knowledgeIndex: 'static/knowledge-index.json',
     },
     factGraph: 'fact-graph.json',
     products: {
       inventory: 'inventory.json',
+      repoProfile: 'repo-profile.json',
+      scanPolicy: 'scan-policy.json',
       gapQueue: 'gap-queue.json',
       verification: 'verification.json',
       factGraph: 'fact-graph.json',
@@ -360,6 +378,8 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
       symbols: codeMap.symbols.length,
       imports: codeMap.imports.length,
       relationships: codeMap.relationships.length,
+      repoKind: repoProfile.repoKind,
+      primaryLanguage: repoProfile.primaryLanguage,
       factNodes: Object.keys(factGraph.nodes).length,
       factEdges: Object.keys(factGraph.edges).length,
       coverageScore: factGraph.stats.coverageScore,
@@ -379,7 +399,7 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
   writeJson(path.join(packageDir, 'index.json'), packageIndex)
   fs.writeFileSync(path.join(packageDir, 'README.md'), renderPackageReadme(packageIndex), 'utf8')
 
-  return { packageDir, inventory, codeMap, factGraph, renderGraph, knowledgeIndex, request, requestHash: hashText(request) }
+  return { packageDir, inventory, codeMap, repoProfile, scanPolicy, factGraph, renderGraph, knowledgeIndex, request, requestHash: hashText(request) }
 }
 
 export function buildRequestForPackage(packageDir) {
@@ -410,6 +430,8 @@ export function buildRequestForPackage(packageDir) {
 function buildUnderstandingRequestPayload(root) {
   const inventory = readJson(path.join(root, 'static', 'inventory.json'))
   const codeMap = readJson(path.join(root, 'static', 'code-map.json'))
+  const repoProfile = readJsonIfExists(path.join(root, 'repo-profile.json')) || readJsonIfExists(path.join(root, 'static', 'repo-profile.json'))
+  const scanPolicy = readJsonIfExists(path.join(root, 'scan-policy.json')) || readJsonIfExists(path.join(root, 'static', 'scan-policy.json'))
   const factGraph = readJsonIfExists(path.join(root, 'fact-graph.json'))
   const renderGraph = readJsonIfExists(path.join(root, 'static', 'render-graph.json'))
   const knowledgeIndex = readJson(path.join(root, 'static', 'knowledge-index.json'))
@@ -421,6 +443,8 @@ function buildUnderstandingRequestPayload(root) {
     repo: inventory.repo,
     inventory,
     codeMap,
+    repoProfile,
+    scanPolicy,
     factGraph,
     renderGraph,
     knowledgeIndex,
@@ -553,6 +577,8 @@ export function validateUnderstandingPackage(packageDir) {
   const requiredFiles = [
     'index.json',
     'inventory.json',
+    'repo-profile.json',
+    'scan-policy.json',
     'gap-queue.json',
     'verification.json',
     'fact-graph.json',
@@ -565,6 +591,8 @@ export function validateUnderstandingPackage(packageDir) {
     'wiki/README.md',
     'static/inventory.json',
     'static/code-map.json',
+    'static/repo-profile.json',
+    'static/scan-policy.json',
     'static/render-graph.json',
     'static/knowledge-index.json',
   ]
@@ -575,6 +603,8 @@ export function validateUnderstandingPackage(packageDir) {
 
   const inventory = readJson(path.join(root, 'static', 'inventory.json'))
   const codeMap = readJson(path.join(root, 'static', 'code-map.json'))
+  const repoProfile = readJson(path.join(root, 'static', 'repo-profile.json'))
+  const scanPolicy = readJson(path.join(root, 'static', 'scan-policy.json'))
   const factGraph = readJson(path.join(root, 'fact-graph.json'))
   const gapQueue = readJson(path.join(root, 'gap-queue.json'))
   const verification = readJson(path.join(root, 'verification.json'))
@@ -609,6 +639,7 @@ export function validateUnderstandingPackage(packageDir) {
   validateInventoryAgainstDisk(inventory, result)
   if (!knowledgeIndex.evidenceRefs.length) result.issues.push('Knowledge index has no evidence refs')
   if (inventory.files.length > 10 && codeMap.symbols.length === 0) result.warnings.push('Code map has no symbols')
+  validateRepoProfile(repoProfile, scanPolicy, inventory, result)
   if ((codeMap.metrics?.parseFailureRate || 0) >= 0.05) result.issues.push(`Scanner parse failure rate is too high: ${codeMap.metrics.parseFailureRate}`)
   validateCodeMapArchitecture(codeMap, validEvidenceRefs, result)
   validateFactGraph(factGraph, inventory, result)
@@ -727,6 +758,25 @@ function validateCodeMapArchitecture(codeMap, validEvidenceRefs, result) {
   const missingRefs = collectEvidenceRefs(architecture).filter(ref => !validEvidenceRefs.has(ref))
   if (missingRefs.length) {
     result.issues.push(`Architecture section references ${missingRefs.length} unknown evidenceRefs: ${missingRefs.slice(0, 8).join(', ')}`)
+  }
+}
+
+function validateRepoProfile(repoProfile, scanPolicy, inventory, result) {
+  if (repoProfile.schemaVersion !== SCHEMA.repoProfile) result.issues.push('Repo profile schemaVersion is invalid')
+  if (scanPolicy.schemaVersion !== SCHEMA.scanPolicy) result.issues.push('Scan policy schemaVersion is invalid')
+  if (!['frontend', 'backend', 'fullstack', 'unknown'].includes(repoProfile.repoKind)) {
+    result.issues.push(`Repo profile repoKind is invalid: ${repoProfile.repoKind}`)
+  }
+  if (!repoProfile.primaryLanguage) result.issues.push('Repo profile primaryLanguage is missing')
+  if (!Array.isArray(repoProfile.evidenceRefs) || repoProfile.evidenceRefs.length === 0) {
+    result.warnings.push('Repo profile has no evidenceRefs')
+  }
+  if (scanPolicy.repoKind !== repoProfile.repoKind) {
+    result.issues.push(`Scan policy repoKind ${scanPolicy.repoKind} does not match profile ${repoProfile.repoKind}`)
+  }
+  const languageCounts = inventory.counts?.languages || {}
+  if ((languageCounts.Java || 0) > 0 && repoProfile.repoKind === 'frontend' && (languageCounts.Java || 0) > ((languageCounts.Vue || 0) + (languageCounts.React || 0) + (languageCounts['React TS'] || 0))) {
+    result.warnings.push('Repo profile classified a Java-heavy repo as frontend')
   }
 }
 
@@ -1246,7 +1296,7 @@ function mergeIncrementalCodeMap(previous, scanned, changedPaths, deletedPaths, 
 
 function collectManifests(root, files) {
   return files
-    .filter(file => MANIFEST_NAMES.has(file.name) && file.contentAnalyzable)
+    .filter(file => isManifestFile(file) && file.contentAnalyzable)
     .map(file => parseManifest(root, file))
     .filter(Boolean)
 }
@@ -1263,7 +1313,7 @@ function parseManifest(root, file) {
         version: pkg.version || null,
         scripts: pkg.scripts || {},
         dependencies: Object.entries({ ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) })
-          .map(([name, version]) => ({ name, version: String(version), scope: pkg.dependencies?.[name] ? 'runtime' : 'dev' })),
+          .map(([name, version]) => ({ name, version: String(version), scope: pkg.dependencies?.[name] ? 'runtime' : 'dev', path: file.relativePath })),
       }
     } catch {
       return null
@@ -1279,6 +1329,7 @@ function parseManifest(root, file) {
       name: firstXmlValue(match[0], 'artifactId') || 'unknown',
       version: firstXmlValue(match[0], 'version'),
       scope: firstXmlValue(match[0], 'scope') || 'runtime',
+      path: file.relativePath,
     }))
     return {
       type: 'maven',
@@ -1293,13 +1344,81 @@ function parseManifest(root, file) {
   }
   if (file.name === 'go.mod') {
     const moduleName = text.match(/^module\s+(.+)$/m)?.[1]?.trim()
-    const dependencies = [...text.matchAll(/^\s*([A-Za-z0-9_.:/-]+)\s+v[^\s]+/gm)].map(match => ({ name: match[1], scope: 'runtime' }))
+    const dependencies = [...text.matchAll(/^\s*(?:require\s+)?([A-Za-z0-9_.:/-]+)\s+v[^\s]+/gm)]
+      .map(match => ({ name: match[1], scope: 'runtime', path: file.relativePath }))
     return { type: 'go', path: file.relativePath, name: moduleName || path.basename(root), dependencies }
   }
   if (file.name === 'Cargo.toml') {
-    return { type: 'cargo', path: file.relativePath, name: text.match(/^\s*name\s*=\s*"([^"]+)"/m)?.[1] || path.basename(root), dependencies: [] }
+    const dependencies = [...text.matchAll(/^\s*([A-Za-z0-9_-]+)\s*=\s*(?:"[^"]+"|\{[^\n]+)$/gm)]
+      .map(match => ({ name: match[1], scope: 'runtime', path: file.relativePath }))
+    return { type: 'cargo', path: file.relativePath, name: text.match(/^\s*name\s*=\s*"([^"]+)"/m)?.[1] || path.basename(root), dependencies }
+  }
+  if (file.name === 'build.gradle' || file.name === 'settings.gradle') {
+    const dependencies = [...text.matchAll(/(?:implementation|api|compileOnly|runtimeOnly|testImplementation)\s+['"]([^:'"]+):([^:'"]+):?([^'"]*)['"]/g)]
+      .map(match => ({ groupId: match[1], name: match[2], version: match[3] || null, scope: 'runtime', path: file.relativePath }))
+    return { type: 'gradle', path: file.relativePath, name: text.match(/rootProject\.name\s*=\s*['"]([^'"]+)['"]/)?.[1] || path.basename(root), dependencies }
+  }
+  if (file.name === 'pyproject.toml') {
+    const dependencies = [
+      ...tomlArrayValues(text, 'dependencies'),
+      ...tomlPoetryDependencies(text),
+    ].map(name => ({ name, scope: 'runtime', path: file.relativePath }))
+    return { type: 'python', path: file.relativePath, name: text.match(/^\s*name\s*=\s*"([^"]+)"/m)?.[1] || path.basename(root), dependencies }
+  }
+  if (file.name === 'requirements.txt') {
+    const dependencies = text.split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#') && !line.startsWith('-'))
+      .map(line => ({ name: line.split(/[<>=~! ]/)[0], scope: 'runtime', path: file.relativePath }))
+    return { type: 'python', path: file.relativePath, name: path.basename(root), dependencies }
+  }
+  if (file.name === 'Gemfile') {
+    const dependencies = [...text.matchAll(/^\s*gem\s+['"]([^'"]+)['"]/gm)]
+      .map(match => ({ name: match[1], scope: 'runtime', path: file.relativePath }))
+    return { type: 'bundler', path: file.relativePath, name: path.basename(root), dependencies }
+  }
+  if (file.name === 'composer.json') {
+    try {
+      const composer = JSON.parse(text)
+      const dependencies = Object.entries({ ...(composer.require || {}), ...(composer['require-dev'] || {}) })
+        .filter(([name]) => name !== 'php')
+        .map(([name, version]) => ({ name, version: String(version), scope: composer.require?.[name] ? 'runtime' : 'dev', path: file.relativePath }))
+      return { type: 'composer', path: file.relativePath, name: composer.name || path.basename(root), dependencies }
+    } catch {
+      return null
+    }
+  }
+  if (/\.csproj$/i.test(file.name)) {
+    const dependencies = [...text.matchAll(/<PackageReference[^>]+Include=["']([^"']+)["'][^>]*(?:Version=["']([^"']+)["'])?/g)]
+      .map(match => ({ name: match[1], version: match[2] || null, scope: 'runtime', path: file.relativePath }))
+    return { type: 'dotnet', path: file.relativePath, name: firstXmlValue(text, 'AssemblyName') || file.name.replace(/\.csproj$/i, ''), dependencies }
   }
   return { type: 'generic', path: file.relativePath, name: path.basename(root), dependencies: [] }
+}
+
+function isManifestFile(file) {
+  return MANIFEST_NAMES.has(file.name) || /\.csproj$/i.test(file.name)
+}
+
+function tomlArrayValues(text, key) {
+  const match = text.match(new RegExp(`^\\s*${key}\\s*=\\s*\\[([\\s\\S]*?)\\]`, 'm'))
+  if (!match) return []
+  return [...match[1].matchAll(/["']([^"']+)["']/g)]
+    .map(item => packageNameFromRequirement(item[1]))
+    .filter(Boolean)
+}
+
+function tomlPoetryDependencies(text) {
+  const section = text.match(/^\s*\[tool\.poetry\.dependencies\]\s*$([\s\S]*?)(?=^\s*\[|$)/m)?.[1] || ''
+  return section.split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('#') && !line.startsWith('python'))
+    .map(line => packageNameFromRequirement(line.split('=')[0]))
+    .filter(Boolean)
+}
+
+function packageNameFromRequirement(value) {
+  return String(value || '').trim().split(/[<>=~! ;\[]/)[0]
 }
 
 function extractFileSignals(file, text) {
@@ -1374,7 +1493,7 @@ function extractFileSignals(file, text) {
       const classMatch = trimmed.match(/^class\s+([A-Za-z_][\w]*)/)
       if (classMatch) pushSymbol('class', classMatch[1])
     } else if (file.ext === '.go') {
-      const importMatch = trimmed.match(/^"([^"]+)"$/)
+      const importMatch = trimmed.match(/^import\s+"([^"]+)"$/) || trimmed.match(/^"([^"]+)"$/)
       if (importMatch) imports.push(importRecord(file, importMatch[1], lineNo, 'go-import'))
       const funcMatch = trimmed.match(/^func\s+(?:\([^)]+\)\s*)?([A-Za-z_][\w]*)\s*\(/)
       if (funcMatch) pushSymbol('function', funcMatch[1])
@@ -1929,7 +2048,7 @@ function truncateText(value, max) {
   return `${text.slice(0, Math.max(1, max - 3))}...`
 }
 
-function buildUnderstandingRequest({ repo, inventory, codeMap, factGraph = null, renderGraph = null, knowledgeIndex, snippets, explorationAnalysis = null, explorationEvidenceBundle = null }) {
+function buildUnderstandingRequest({ repo, inventory, codeMap, repoProfile = null, scanPolicy = null, factGraph = null, renderGraph = null, knowledgeIndex, snippets, explorationAnalysis = null, explorationEvidenceBundle = null }) {
   const topFiles = inventory.files.slice(0, 80)
   const topSymbols = codeMap.symbols.slice(0, 120)
   const topImports = codeMap.imports.slice(0, 90)
@@ -1991,6 +2110,18 @@ ${JSON.stringify(repo, null, 2)}
 
 \`\`\`json
 ${JSON.stringify(inventory.counts, null, 2)}
+\`\`\`
+
+## L0 Repo Scout Profile
+
+\`\`\`json
+${JSON.stringify(repoProfile || {}, null, 2)}
+\`\`\`
+
+## L0 Scan Policy
+
+\`\`\`json
+${JSON.stringify(scanPolicy || {}, null, 2)}
 \`\`\`
 
 ## Manifests
@@ -2147,6 +2278,8 @@ ${analysis ? `\n## Summary\n\n${analysis.summary}\n` : ''}
 ## Files
 
 - Inventory: \`${index.products?.inventory || 'inventory.json'}\`
+- Repo profile: \`${index.products?.repoProfile || 'repo-profile.json'}\`
+- Scan policy: \`${index.products?.scanPolicy || 'scan-policy.json'}\`
 - Gap queue: \`${index.products?.gapQueue || 'gap-queue.json'}\`
 - Fact graph: \`${index.products?.factGraph || index.factGraph || 'fact-graph.json'}\`
 - Render graph: \`${index.products?.renderGraph || 'render-graph.json'}\`
@@ -2154,6 +2287,8 @@ ${analysis ? `\n## Summary\n\n${analysis.summary}\n` : ''}
 - Wiki: \`${index.products?.wiki || 'wiki/'}\`
 - Static inventory: \`${index.static.inventory}\`
 - Code map: \`${index.static.codeMap}\`
+- Static repo profile: \`${index.static.repoProfile || 'static/repo-profile.json'}\`
+- Static scan policy: \`${index.static.scanPolicy || 'static/scan-policy.json'}\`
 - Render graph: ${index.static.renderGraph ? `\`${index.static.renderGraph}\`` : 'not written yet'}
 - Knowledge index: \`${index.static.knowledgeIndex}\`
 - Exploration analysis: ${index.analyses.repoExploration ? `\`${index.analyses.repoExploration}\`` : 'not written yet'}
@@ -2246,6 +2381,13 @@ function languageFor(name, ext, isTextual = true) {
   if (SENSITIVE_NAMES.has(name) || RESOURCE_EXTS.has(ext)) return 'Protected Metadata'
   if (name === 'pom.xml') return 'Maven XML'
   if (name === 'package.json') return 'NPM JSON'
+  if (name === 'composer.json') return 'Composer JSON'
+  if (name === 'pyproject.toml') return 'Python Project'
+  if (name === 'requirements.txt') return 'Python Requirements'
+  if (name === 'go.mod') return 'Go Module'
+  if (name === 'Cargo.toml') return 'Cargo TOML'
+  if (name === 'build.gradle' || name === 'settings.gradle') return 'Gradle'
+  if (/\.csproj$/i.test(name)) return 'MSBuild XML'
   if (name === 'Makefile') return 'Makefile'
   if (name === 'Gemfile') return 'Ruby Bundler'
   if (name === 'Procfile') return 'Procfile'

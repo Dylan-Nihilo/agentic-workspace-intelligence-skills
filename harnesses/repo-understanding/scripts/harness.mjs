@@ -564,6 +564,8 @@ function newlyRefutedVerifierEdges(beforeVerification, afterVerification) {
 function renderHarnessReport(packageDir, validation) {
   const inventory = readJsonIfExists(path.join(packageDir, 'inventory.json')) || readJson(path.join(packageDir, 'static', 'inventory.json'))
   const factGraph = readJson(path.join(packageDir, 'fact-graph.json'))
+  const repoProfile = readJsonIfExists(path.join(packageDir, 'repo-profile.json')) || readJsonIfExists(path.join(packageDir, 'static', 'repo-profile.json'))
+  const scanPolicy = readJsonIfExists(path.join(packageDir, 'scan-policy.json')) || readJsonIfExists(path.join(packageDir, 'static', 'scan-policy.json'))
   const gapQueue = readJsonIfExists(path.join(packageDir, 'gap-queue.json')) || {}
   const renderGraph = readJsonIfExists(path.join(packageDir, 'render-graph.json')) || { nodes: [], edges: [] }
   const knowledgeIndex = readJsonIfExists(path.join(packageDir, 'knowledge-index.json')) || { chunks: [] }
@@ -593,6 +595,7 @@ function renderHarnessReport(packageDir, validation) {
   lines.push('')
   lines.push(markdownTable(['指标', '值'], [
     ['Git branch/head', git],
+    ['L0 profile', `${repoProfile?.repoKind || 'unknown'} / ${repoProfile?.primaryLanguage || 'unknown'}`],
     ['Files / source files', `${stats.files ?? inventory.files?.length ?? 0} / ${sourceFiles}`],
     ['Protected files', stats.protectedFiles ?? inventory.counts?.protectedFiles ?? 0],
     ['FactGraph nodes / edges', `${Object.keys(factGraph.nodes || {}).length} / ${Object.keys(factGraph.edges || {}).length}`],
@@ -606,11 +609,12 @@ function renderHarnessReport(packageDir, validation) {
     ['Evidence bundle files / searches / skipped', `${evidenceBundle.files?.length ?? 0} / ${evidenceBundle.searches?.length ?? 0} / ${evidenceBundle.skipped?.length ?? 0}`],
   ]))
   lines.push('')
-  lines.push(renderProjectOverview(inventory, factGraph))
+  lines.push(renderProjectOverview(inventory, factGraph, repoProfile, scanPolicy))
   lines.push('')
   lines.push('## 3. 执行链路')
   lines.push('')
   lines.push(markdownTable(['阶段', '命令/动作'], [
+    ['L0 scout', 'repo-scout profile + scan-policy'],
     ['L1 analyze', 'harness analyze --repo ... --out <package>'],
     ['L2 explore', 'harness explore --package <package>'],
     ['L2 evidence bundle', 'npm run understanding:collect-exploration -- --package <package>'],
@@ -659,7 +663,10 @@ function renderHarnessReport(packageDir, validation) {
   return lines.join('\n')
 }
 
-function renderProjectOverview(inventory, factGraph) {
+function renderProjectOverview(inventory, factGraph, repoProfile = null, scanPolicy = null) {
+  if ((scanPolicy?.reportProjection?.mode || repoProfile?.repoKind) === 'backend') {
+    return renderBackendProjectOverview(inventory, factGraph, repoProfile)
+  }
   const repoPath = inventory.repo?.path || factGraph.repo?.path || ''
   const packageJson = readRepoJson(repoPath, 'package.json', inventory) || {}
   const readme = readFirstExistingRepoText(repoPath, ['README.md', 'readme.md'], inventory)
@@ -729,6 +736,49 @@ function renderProjectOverview(inventory, factGraph) {
   lines.push('阅读代码时建议从这些入口进入:')
   lines.push('')
   lines.push(markdownTable(['入口', '用途'], overviewEntryRows(inventory)))
+  return lines.join('\n')
+}
+
+function renderBackendProjectOverview(inventory, factGraph, repoProfile = null) {
+  const repoPath = inventory.repo?.path || factGraph.repo?.path || ''
+  const repoName = inventory.repo?.name || factGraph.repo?.name || path.basename(repoPath)
+  const manifests = inventory.manifests || []
+  const frameworks = (repoProfile?.frameworks || []).map(item => item.name).filter(Boolean)
+  const buildSystems = (repoProfile?.buildSystems || []).length ? repoProfile.buildSystems : manifests
+  const routeCount = Object.values(factGraph.nodes || {}).filter(node => node.type === 'route').length
+  const runtimeFiles = backendRuntimeFiles(inventory)
+  const entryRows = backendOverviewEntryRows(inventory)
+  const moduleRows = buildSystems
+    .filter(item => item.type === 'maven')
+    .slice(0, 8)
+    .map(item => [item.path || 'pom.xml', item.name || '-', item.packaging || '-'])
+  const lines = []
+
+  lines.push('## 2. 项目概览')
+  lines.push('')
+  lines.push(`\`${repoName}\` 是以 ${repoProfile?.primaryLanguage || '后端语言'} 为主的后端仓库。L0 scout 将它识别为 \`${repoProfile?.repoKind || 'backend'}\`${frameworks.length ? `, 主要技术迹象包括 ${frameworks.map(item => `\`${item}\``).join('、')}` : ''}。`)
+  lines.push('')
+  if (buildSystems.length) {
+    lines.push(`构建与模块边界来自 manifest: ${buildSystems.slice(0, 5).map(item => `\`${item.path || item.type}\``).join('、')}。当前 FactGraph 识别到 ${routeCount} 个 route 节点。`)
+    lines.push('')
+  }
+  if (moduleRows.length) {
+    lines.push('Maven 模块/构建文件:')
+    lines.push('')
+    lines.push(markdownTable(['manifest', 'artifact/module', 'packaging'], moduleRows))
+    lines.push('')
+  }
+  if (runtimeFiles.length) {
+    lines.push('运行配置和容器入口优先从这些文件确认:')
+    lines.push('')
+    lines.push(markdownTable(['文件', '用途'], runtimeFiles.map(file => [file.path, backendFilePurpose(file.path)])))
+    lines.push('')
+  }
+  if (entryRows.length) {
+    lines.push('阅读代码时建议从这些后端入口进入:')
+    lines.push('')
+    lines.push(markdownTable(['入口', '用途'], entryRows))
+  }
   return lines.join('\n')
 }
 
@@ -818,6 +868,39 @@ function overviewEntryRows(inventory) {
   }
   if ((inventory.files || []).some(file => String(file.path || '').startsWith('src/api/'))) rows.push(['src/api/*.js', '按业务域拆分的接口调用'])
   return rows.slice(0, 10)
+}
+
+function backendRuntimeFiles(inventory) {
+  return (inventory.files || [])
+    .filter(file => !file.protected)
+    .filter(file => /(^|\/)(pom\.xml|web\.xml|application\.(properties|ya?ml)|bootstrap\.(properties|ya?ml))$|runtimecfg|(^|\/)(config|conf)(\/|$)/i.test(file.path))
+    .slice(0, 12)
+}
+
+function backendOverviewEntryRows(inventory) {
+  const patterns = [
+    [/SpringBootApplication|Application\.java$/i, '应用启动入口或 Spring Boot 装配入口'],
+    [/Controller\.java$|Resource\.java$|Handler\.java$/i, 'HTTP/API 或请求处理入口'],
+    [/Service\.java$|BizImpl\.java$|Facade.*\.java$/i, '业务服务和 facade 实现'],
+    [/Mapper\.java$|Dao\.java$|Repository\.java$/i, '数据访问接口'],
+    [/web\.xml$/i, 'Servlet 容器配置'],
+    [/runtimecfg\/.*\.properties$/i, '运行期组件初始化配置'],
+    [/pom\.xml$/i, 'Maven 构建与模块依赖'],
+  ]
+  const rows = []
+  for (const [pattern, purpose] of patterns) {
+    const file = (inventory.files || []).find(item => pattern.test(item.path) && !item.protected)
+    if (file) rows.push([file.path, purpose])
+  }
+  return rows.slice(0, 10)
+}
+
+function backendFilePurpose(filePath) {
+  if (/pom\.xml$/.test(filePath)) return 'Maven 构建、模块和依赖'
+  if (/web\.xml$/.test(filePath)) return 'Servlet 容器配置'
+  if (/runtimecfg/i.test(filePath)) return '运行期组件初始化或框架约定配置'
+  if (/application\.(properties|ya?ml)$|bootstrap\.(properties|ya?ml)$/i.test(filePath)) return '应用启动配置'
+  return '后端运行配置'
 }
 
 function renderPredicateSamples(validation) {
@@ -1211,6 +1294,8 @@ function normalizeVerifierVerdicts(values) {
 function readPackageState(packageDir) {
   return {
     inventory: readJson(path.join(packageDir, 'static', 'inventory.json')),
+    repoProfile: readJsonIfExists(path.join(packageDir, 'repo-profile.json')) || readJsonIfExists(path.join(packageDir, 'static', 'repo-profile.json')),
+    scanPolicy: readJsonIfExists(path.join(packageDir, 'scan-policy.json')) || readJsonIfExists(path.join(packageDir, 'static', 'scan-policy.json')),
     factGraph: readJson(path.join(packageDir, 'fact-graph.json')),
     gapQueue: readJson(path.join(packageDir, 'gap-queue.json')),
   }
@@ -1239,7 +1324,7 @@ function buildExplorerDispatch(packageDir, state, maxTasks, explorerFilter = nul
       effort: explorerEffort(explorer, explorerConfig),
       prompt: explorer === EXPLORER.adversarialVerify
         ? renderVerifierPrompt(explorerTasks, state.factGraph)
-        : renderExplorerPrompt(explorer, explorerTasks, state.factGraph),
+        : renderExplorerPrompt(explorer, explorerTasks, state.factGraph, state.repoProfile, state.scanPolicy),
     })),
   }
 }
@@ -1256,7 +1341,7 @@ function candidateExecutableGapTasks(gapQueue) {
     .filter(task => task.explorer)
 }
 
-function renderExplorerPrompt(explorer, tasks, factGraph) {
+function renderExplorerPrompt(explorer, tasks, factGraph, repoProfile = null, scanPolicy = null) {
   const relatedIds = new Set(tasks.flatMap(task => task.relatedNodes || []))
   const nodes = [...relatedIds].filter(id => factGraph.nodes?.[id]).map(id => factGraph.nodes[id])
   const edges = [...relatedIds].filter(id => factGraph.edges?.[id]).map(id => factGraph.edges[id])
@@ -1266,6 +1351,12 @@ function renderExplorerPrompt(explorer, tasks, factGraph) {
     'Do not modify files, install dependencies, run builds, or access the network.',
     'Explore read-only with rg, find, sed -n, nl -ba, and other non-mutating commands.',
     'Output facts[] triples only when evidence is concrete. Put uncertainty in openQuestions[].',
+    '',
+    'L0 repo scout profile:',
+    JSON.stringify(repoProfile || {}, null, 2),
+    '',
+    'L0 scan policy:',
+    JSON.stringify(scanPolicy || {}, null, 2),
     '',
     'Tasks:',
     JSON.stringify(tasks, null, 2),

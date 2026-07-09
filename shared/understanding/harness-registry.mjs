@@ -4,10 +4,13 @@
 
 export const EXPLORER = Object.freeze({
   vueContainment: 'vue-containment',
+  componentStructure: 'component-structure',
   routeBinding: 'route-binding',
+  runtimeConfig: 'runtime-config',
   authChain: 'auth-chain',
   dataAccess: 'data-access',
   callChain: 'call-chain',
+  dependencyResolution: 'dependency-resolution',
   dynamicImport: 'dynamic-import',
   adversarialVerify: 'adversarial-verify',
   coverageDirected: 'coverage-directed',
@@ -17,11 +20,19 @@ export const EFFORT_LEVELS = Object.freeze(['low', 'medium', 'high'])
 
 export const EXPLORERS = Object.freeze({
   [EXPLORER.vueContainment]: {
-    kind: 'path-routed',
-    pathPattern: /\.vue$|components?|views?|pages?/i,
+    kind: 'legacy',
+    pathPattern: /^$/,
     tokenBudget: 12000,
     effort: 'low',
-    label: 'Vue 结构',
+    label: 'Vue 结构(legacy)',
+    inFactEnum: true,
+  },
+  [EXPLORER.componentStructure]: {
+    kind: 'path-routed',
+    pathPattern: /\.vue$|\.jsx$|\.tsx$|(^|\/)(components?|views?|pages?|screens?)(\/|$)/i,
+    tokenBudget: 12000,
+    effort: 'low',
+    label: '组件结构',
     inFactEnum: true,
   },
   [EXPLORER.routeBinding]: {
@@ -30,6 +41,14 @@ export const EXPLORERS = Object.freeze({
     tokenBudget: 12000,
     effort: 'low',
     label: '路由绑定',
+    inFactEnum: true,
+  },
+  [EXPLORER.runtimeConfig]: {
+    kind: 'path-routed',
+    pathPattern: /runtimecfg|application\.(ya?ml|properties)$|bootstrap\.(ya?ml|properties)$|web\.xml$|(^|\/)(config|conf|resources)(\/|$)|\.(properties|ya?ml)$/i,
+    tokenBudget: 12000,
+    effort: 'medium',
+    label: '运行配置',
     inFactEnum: true,
   },
   [EXPLORER.authChain]: {
@@ -54,6 +73,13 @@ export const EXPLORERS = Object.freeze({
     tokenBudget: 18000,
     effort: 'high',
     label: '调用链路',
+    inFactEnum: true,
+  },
+  [EXPLORER.dependencyResolution]: {
+    kind: 'system',
+    tokenBudget: 10000,
+    effort: 'medium',
+    label: '依赖解析',
     inFactEnum: true,
   },
   [EXPLORER.dynamicImport]: {
@@ -130,11 +156,22 @@ export function explorerEffort(name, config = {}) {
   return EXPLORERS[name]?.effort || 'medium'
 }
 
-export function pickExplorerForPath(filePath) {
+export function pickExplorerForPath(filePath, context = {}) {
   const value = String(filePath || '')
-  for (const [name, explorer] of Object.entries(EXPLORERS)) {
-    if (explorer.kind === 'path-routed' && explorer.pathPattern.test(value)) return name
-  }
+  const repoKind = context.profile?.repoKind || context.repoKind || context.scanPolicy?.repoKind || 'unknown'
+  const frontendLikely = repoKind === 'frontend' || repoKind === 'fullstack' || /\.(vue|jsx|tsx)$/i.test(value)
+  const routeLikely = EXPLORERS[EXPLORER.routeBinding].pathPattern.test(value)
+  const authLikely = EXPLORERS[EXPLORER.authChain].pathPattern.test(value)
+  const dataLikely = EXPLORERS[EXPLORER.dataAccess].pathPattern.test(value)
+  const callLikely = EXPLORERS[EXPLORER.callChain].pathPattern.test(value)
+  const runtimeLikely = EXPLORERS[EXPLORER.runtimeConfig].pathPattern.test(value)
+  const componentLikely = frontendLikely && EXPLORERS[EXPLORER.componentStructure].pathPattern.test(value)
+  if (authLikely) return EXPLORER.authChain
+  if (dataLikely) return EXPLORER.dataAccess
+  if (callLikely) return EXPLORER.callChain
+  if (routeLikely) return EXPLORER.routeBinding
+  if (runtimeLikely) return EXPLORER.runtimeConfig
+  if (componentLikely) return EXPLORER.componentStructure
   return EXPLORER.coverageDirected
 }
 

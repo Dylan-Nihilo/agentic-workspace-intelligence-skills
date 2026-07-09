@@ -9,6 +9,12 @@ import {
   pickExplorerForPath,
   validPredicateSet,
 } from './harness-registry.mjs'
+import {
+  buildRepoScoutProfile,
+  buildScanPolicy,
+  readRepoProfileFromPackage,
+  readScanPolicyFromPackage,
+} from './repo-scout-profile.mjs'
 
 const FACT_GRAPH_VERSION = '1.0'
 const FACT_SCHEMA = 'repo-fact-graph/v1'
@@ -37,6 +43,8 @@ const EXPLORATION_FACT_SCHEMA = 'repo-explorer-output/v1'
 
 export function buildHarnessArtifacts(input) {
   const options = { ...DEFAULT_OPTIONS, ...loadHarnessOptions(), ...(input.options || {}) }
+  options.repoProfile = input.repoProfile || options.repoProfile || null
+  options.scanPolicy = input.scanPolicy || options.scanPolicy || null
   const generatedAt = input.generatedAt || new Date().toISOString()
   const incrementalPaths = dedupeStrings(input.invalidatedPaths || input.changedPaths || [])
   const incremental = Boolean(input.previousFactGraph && input.incremental)
@@ -56,7 +64,7 @@ export function buildHarnessArtifacts(input) {
   const knowledgeIndex = projectKnowledgeIndex(factGraph)
   const knowledgeJsonl = renderKnowledgeJsonl(knowledgeIndex)
   const wikiFiles = projectWiki(factGraph, input.analysis)
-  return { inventory: input.inventory, gapQueue, verification, factGraph, renderGraph, knowledgeIndex, knowledgeJsonl, wikiFiles }
+  return { inventory: input.inventory, repoProfile: input.repoProfile, scanPolicy: input.scanPolicy, gapQueue, verification, factGraph, renderGraph, knowledgeIndex, knowledgeJsonl, wikiFiles }
 }
 
 function loadHarnessOptions() {
@@ -84,6 +92,14 @@ export function writeHarnessArtifacts(packageDir, artifacts, options = {}) {
   if (artifacts.inventory) {
     writeJson(path.join(root, 'inventory.json'), artifacts.inventory)
     writeJson(path.join(staticDir, 'inventory.json'), artifacts.inventory)
+  }
+  if (artifacts.repoProfile) {
+    writeJson(path.join(root, 'repo-profile.json'), artifacts.repoProfile)
+    writeJson(path.join(staticDir, 'repo-profile.json'), artifacts.repoProfile)
+  }
+  if (artifacts.scanPolicy) {
+    writeJson(path.join(root, 'scan-policy.json'), artifacts.scanPolicy)
+    writeJson(path.join(staticDir, 'scan-policy.json'), artifacts.scanPolicy)
   }
   if (artifacts.factGraph) {
     writeJson(path.join(root, 'fact-graph.json'), artifacts.factGraph)
@@ -117,6 +133,10 @@ export function refreshHarnessArtifactsForPackage(packageDir, options = {}) {
   const root = path.resolve(packageDir)
   const inventory = readJson(path.join(root, 'static', 'inventory.json'))
   const codeMap = readJson(path.join(root, 'static', 'code-map.json'))
+  const repoProfile = readRepoProfileFromPackage(readJsonIfExists, root)
+    || buildRepoScoutProfile({ repo: inventory.repo, inventory, codeMap, generatedAt: new Date().toISOString() })
+  const scanPolicy = readScanPolicyFromPackage(readJsonIfExists, root)
+    || buildScanPolicy(repoProfile)
   const knowledgeIndex = readJsonIfExists(path.join(root, 'static', 'knowledge-index.json'))
   const snippets = {}
   for (const ref of knowledgeIndex?.evidenceRefs || []) {
@@ -130,6 +150,8 @@ export function refreshHarnessArtifactsForPackage(packageDir, options = {}) {
     repo: inventory.repo,
     inventory,
     codeMap,
+    repoProfile,
+    scanPolicy,
     snippets,
     generatedAt: new Date().toISOString(),
     packageDir: root,
@@ -147,6 +169,12 @@ export function refreshHarnessArtifactsForPackage(packageDir, options = {}) {
 export function projectHarnessPackage(packageDir, options = {}) {
   const root = path.resolve(packageDir)
   const factGraph = readJson(path.join(root, 'fact-graph.json'))
+  const inventory = readJsonIfExists(path.join(root, 'static', 'inventory.json'))
+  const codeMap = readJsonIfExists(path.join(root, 'static', 'code-map.json'))
+  const repoProfile = readRepoProfileFromPackage(readJsonIfExists, root)
+    || (inventory && codeMap ? buildRepoScoutProfile({ repo: inventory.repo, inventory, codeMap, generatedAt: new Date().toISOString() }) : null)
+  const scanPolicy = readScanPolicyFromPackage(readJsonIfExists, root)
+    || (repoProfile ? buildScanPolicy(repoProfile) : null)
   const only = options.only || 'all'
   const renderGraph = projectRenderGraph(factGraph, { ...DEFAULT_OPTIONS, ...(options.options || {}) })
   const knowledgeIndex = projectKnowledgeIndex(factGraph)
@@ -154,7 +182,15 @@ export function projectHarnessPackage(packageDir, options = {}) {
   const analysis = readJsonIfExists(path.join(root, 'analyses', 'repo-understanding.json'))
   const wikiFiles = projectWiki(factGraph, analysis)
   const gapQueue = readJsonIfExists(path.join(root, 'gap-queue.json'))
-  const artifacts = { factGraph, gapQueue, renderGraph, knowledgeIndex, knowledgeJsonl, wikiFiles }
+  const artifacts = { factGraph, repoProfile, scanPolicy, gapQueue, renderGraph, knowledgeIndex, knowledgeJsonl, wikiFiles }
+  if (repoProfile && (only === 'all' || only === 'repo-profile')) {
+    writeJson(path.join(root, 'repo-profile.json'), repoProfile)
+    writeJson(path.join(root, 'static', 'repo-profile.json'), repoProfile)
+  }
+  if (scanPolicy && (only === 'all' || only === 'scan-policy')) {
+    writeJson(path.join(root, 'scan-policy.json'), scanPolicy)
+    writeJson(path.join(root, 'static', 'scan-policy.json'), scanPolicy)
+  }
   if (only === 'all' || only === 'render-graph') {
     writeJson(path.join(root, 'render-graph.json'), renderGraph)
     writeJson(path.join(root, 'static', 'render-graph.json'), renderGraph)
@@ -294,7 +330,7 @@ function addStaticFacts(builder, inventory, codeMap, snippets, options) {
   })
   const fileMeta = new Map(inventory.files.map(file => [file.path, file]))
   const moduleNodes = new Map()
-  const importResolver = buildImportResolver(inventory)
+  const importResolver = buildImportResolver(inventory, options.repoProfile, options.scanPolicy)
 
   for (const dir of inventory.directories || []) {
     const node = addNode(builder, {
@@ -445,15 +481,15 @@ function addStaticFacts(builder, inventory, codeMap, snippets, options) {
   for (const item of codeMap.imports || []) {
     const resolved = resolveImportTarget(inventory, item.file, item.target, importResolver)
     if (resolved.unresolved) {
-      const question = `Unresolved import target ${item.target} in ${item.file}`
       builder.unresolvedImports.push({
         file: item.file,
         target: item.target,
         kind: item.kind,
         line: item.line,
         reason: resolved.reason || 'not resolved to an inventory file',
+        classification: resolved.classification || 'unresolved-import',
+        recommendedExplorer: resolved.recommendedExplorer || EXPLORER.dependencyResolution,
       })
-      builder.openQuestions.push(openQuestion(question, [fileId(item.file)], 'import-resolver'))
       continue
     }
     const object = addNode(builder, resolved.node)
@@ -1034,9 +1070,10 @@ function buildGapQueue(factGraph, inventory, options, previousGapQueue = null) {
 
   for (const file of sourceFiles) {
     if (connectedFiles.has(file.path)) continue
+    const explorer = explorerForPath(file.path, options)
     addTask({
       priority: 'high',
-      explorer: explorerForPath(file.path),
+      explorer,
       type: 'coverage-gap',
       reason: `${file.path} has no non-containment facts after L1 scan.`,
       relatedNodes: [fileId(file.path)],
@@ -1058,9 +1095,10 @@ function buildGapQueue(factGraph, inventory, options, previousGapQueue = null) {
   }
 
   for (const item of factGraph.quality?.unresolvedImports || []) {
+    const explorer = unresolvedImportExplorer(item, options)
     addTask({
       priority: item.kind === 'js-dynamic-import' ? 'high' : 'medium',
-      explorer: item.kind === 'js-dynamic-import' ? EXPLORER.dynamicImport : EXPLORER.routeBinding,
+      explorer,
       type: 'unresolved-import',
       reason: `Import target ${item.target} in ${item.file} was not resolved to a file node: ${item.reason}.`,
       relatedNodes: [fileId(item.file)],
@@ -1069,21 +1107,23 @@ function buildGapQueue(factGraph, inventory, options, previousGapQueue = null) {
   }
 
   for (const hint of factGraph.quality?.semanticHints || []) {
+    const explorer = explorerForPath(hint.file, options)
     addTask({
       priority: hint.predicate === 'guarded-by' ? 'medium' : 'low',
-      explorer: explorerForPath(hint.file),
+      explorer,
       type: 'semantic-hint',
       reason: `${hint.file}:${hint.line} may imply ${hint.predicate} (${hint.signal}); L2 must confirm before it becomes a FactGraph edge.`,
       relatedNodes: [fileId(hint.file)],
       suggestedSearches: [hint.signal, hint.file],
-      tokenBudget: explorerTokenBudget(explorerForPath(hint.file), options),
+      tokenBudget: explorerTokenBudget(explorer, options),
     })
   }
 
   for (const question of factGraph.openQuestions || []) {
+    const explorer = explorerForOpenQuestion(question, options)
     addTask({
       priority: question.raisedBy === 'coverage-gate' ? 'high' : 'medium',
-      explorer: question.raisedBy === 'coverage-gate' ? EXPLORER.coverageDirected : question.raisedBy,
+      explorer,
       type: 'open-question',
       reason: question.question,
       relatedNodes: question.relatedNodes,
@@ -1737,6 +1777,8 @@ function refreshPackageIndex(root, artifacts) {
   index.products = {
     ...(index.products || {}),
     inventory: 'inventory.json',
+    repoProfile: 'repo-profile.json',
+    scanPolicy: 'scan-policy.json',
     gapQueue: 'gap-queue.json',
     verification: 'verification.json',
     factGraph: 'fact-graph.json',
@@ -1749,6 +1791,8 @@ function refreshPackageIndex(root, artifacts) {
   }
   index.static = {
     ...(index.static || {}),
+    repoProfile: 'static/repo-profile.json',
+    scanPolicy: 'static/scan-policy.json',
     renderGraph: 'static/render-graph.json',
     knowledgeIndex: 'static/knowledge-index.json',
   }
@@ -1788,11 +1832,12 @@ function writeGraphStore(root, factGraph) {
   fs.writeFileSync(path.join(storeDir, 'open-questions.jsonl'), `${(factGraph.openQuestions || []).map(item => JSON.stringify(item)).join('\n')}\n`, 'utf8')
 }
 
-function buildImportResolver(inventory) {
+function buildImportResolver(inventory, repoProfile = null, scanPolicy = null) {
   const paths = new Set((inventory.files || []).map(file => file.path))
   const aliases = [
     ...readAliasConfig(inventory.repo?.path || '', paths),
     ...readTsPathAliases(inventory.repo?.path || '', paths),
+    ...scanPolicyAliases(scanPolicy),
   ]
   if ([...paths].some(file => file.startsWith('src/'))) {
     aliases.push({ alias: '@', target: 'src' })
@@ -1802,6 +1847,8 @@ function buildImportResolver(inventory) {
     paths,
     aliases: dedupeBy(aliases.filter(item => item.alias && item.target), item => `${item.alias}:${item.target}`)
       .sort((a, b) => b.alias.length - a.alias.length),
+    repoProfile,
+    scanPolicy,
     srcDirs: new Set(
       [...paths]
         .filter(file => file.startsWith('src/') && file.slice(4).includes('/'))
@@ -1813,33 +1860,33 @@ function buildImportResolver(inventory) {
 
 function resolveImportTarget(inventory, fromFile, target, resolver = buildImportResolver(inventory)) {
   const normalizedTarget = normalizeImportTarget(target)
-  if (!normalizedTarget) return { unresolved: true, reason: 'empty import target' }
+  if (!normalizedTarget) return unresolvedImport('empty import target')
 
   if (normalizedTarget.startsWith('.') || normalizedTarget.startsWith('/')) {
     const resolved = resolveRelativeImport(resolver.paths, fromFile, normalizedTarget)
     if (resolved) {
       return resolvedFileNode(inventory, resolved)
     }
-    return { unresolved: true, reason: 'relative import did not resolve to an inventory file' }
+    return unresolvedImport('relative import did not resolve to an inventory file')
   }
 
   const aliasBase = expandAliasTarget(normalizedTarget, resolver)
   if (aliasBase) {
     const resolved = resolveBareImport(resolver.paths, aliasBase)
     if (resolved) return resolvedFileNode(inventory, resolved)
-    return { unresolved: true, reason: `alias import ${target} expanded to ${aliasBase} but did not resolve` }
+    return unresolvedImport(`alias import ${target} expanded to ${aliasBase} but did not resolve`)
   }
 
   const heuristicBase = expandInternalHeuristic(normalizedTarget, resolver)
   if (heuristicBase) {
     const resolved = resolveBareImport(resolver.paths, heuristicBase)
     if (resolved) return resolvedFileNode(inventory, resolved)
-    return { unresolved: true, reason: `internal-looking import ${target} did not resolve` }
+    return unresolvedImport(`internal-looking import ${target} did not resolve`)
   }
 
   const pkg = packageNameFromImport(normalizedTarget)
   if (!pkg || pkg === '.' || pkg.startsWith('@/') || resolver.topDirs.has(pkg)) {
-    return { unresolved: true, reason: `import target ${target} is not a valid external package` }
+    return unresolvedImport(`import target ${target} is not a valid external package`)
   }
   return {
     resolved: false,
@@ -1850,6 +1897,15 @@ function resolveImportTarget(inventory, fromFile, target, resolver = buildImport
       tags: ['external'],
       metadata: { importTarget: target },
     },
+  }
+}
+
+function unresolvedImport(reason) {
+  return {
+    unresolved: true,
+    reason,
+    classification: 'import-resolution',
+    recommendedExplorer: EXPLORER.dependencyResolution,
   }
 }
 
@@ -1949,6 +2005,12 @@ function readTsPathAliases(repoPath, paths) {
     }
   }
   return aliases
+}
+
+function scanPolicyAliases(scanPolicy) {
+  return (scanPolicy?.importResolution?.aliases || [])
+    .filter(item => item.alias && item.target && item.alias !== '(config)')
+    .map(item => ({ alias: item.alias, target: item.target }))
 }
 
 function readJsonLoose(file) {
@@ -2129,8 +2191,27 @@ function edgeStyle(edge) {
   }
 }
 
-function explorerForPath(filePath) {
-  return pickExplorerForPath(filePath)
+function unresolvedImportExplorer(item, options = {}) {
+  if (item.kind === 'js-dynamic-import') return EXPLORER.dynamicImport
+  if (item.recommendedExplorer) return item.recommendedExplorer
+  return options.scanPolicy?.importResolution?.unresolvedImportExplorer || EXPLORER.dependencyResolution
+}
+
+function explorerForOpenQuestion(question, options = {}) {
+  if (question.raisedBy === 'coverage-gate') return EXPLORER.coverageDirected
+  if (question.raisedBy === 'import-resolver') return EXPLORER.dependencyResolution
+  const known = new Set(Object.values(EXPLORER))
+  if (known.has(question.raisedBy)) return question.raisedBy
+  const relatedPath = (question.relatedNodes || [])
+    .map(ref => String(ref || ''))
+    .find(ref => ref.startsWith('file:'))
+    ?.replace(/^file:/, '')
+  if (relatedPath) return explorerForPath(relatedPath, options)
+  return EXPLORER.coverageDirected
+}
+
+function explorerForPath(filePath, options = {}) {
+  return pickExplorerForPath(filePath, { profile: options.repoProfile, scanPolicy: options.scanPolicy })
 }
 
 function explorerTokenBudget(explorer, options = {}) {

@@ -5,8 +5,11 @@
   "renderNodeLimit": 800,
   "explorers": {
     "vue-containment": { "enabled": true, "tokenBudget": 12000 },
+    "component-structure": { "enabled": true, "tokenBudget": 12000 },
     "route-binding": { "enabled": true, "tokenBudget": 12000 },
+    "runtime-config": { "enabled": true, "tokenBudget": 12000 },
     "dynamic-import": { "enabled": true, "tokenBudget": 10000 },
+    "dependency-resolution": { "enabled": true, "tokenBudget": 10000 },
     "call-chain": { "enabled": true, "tokenBudget": 18000 },
     "auth-chain": { "enabled": true, "tokenBudget": 14000 },
     "data-access": { "enabled": true, "tokenBudget": 16000 },
