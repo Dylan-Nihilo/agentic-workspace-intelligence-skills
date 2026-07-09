@@ -13,7 +13,8 @@ The rule is: facts are unified, consumers are projections. New output must be de
 
 ```text
 repo
-  -> L1 scanner: inventory + code-map + static facts + gap queue
+  -> L0 scout: repo-profile + scan-policy from manifests, language mix, entrypoints, runtime signals
+  -> L1 scanner: inventory + code-map + static facts + gap queue routed by scan-policy
   -> L2 explorer: structured facts[] + openQuestions[] from gap tasks
   -> L3 merger: schema checks + entity alignment + confidence merge + adversarial verification
   -> L4 projector: wiki/ + human-readable.html + render-graph.json + knowledge-index.jsonl
@@ -52,6 +53,8 @@ npm run understanding:validate -- --package outputs/code-understanding/repo-name
 ```text
 out/<repo>/
   inventory.json
+  repo-profile.json
+  scan-policy.json
   gap-queue.json
   verification.json
   fact-graph.json
@@ -64,6 +67,8 @@ out/<repo>/
   static/
     inventory.json
     code-map.json
+    repo-profile.json
+    scan-policy.json
     render-graph.json
     knowledge-index.json
 ```

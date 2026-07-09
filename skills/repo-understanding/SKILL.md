@@ -3,6 +3,8 @@ name: repo-understanding
 version: 1.0.0
 harnessContract:
   status: repo-harness-status/v1
+  repoProfile: repo-scout-profile/v1
+  scanPolicy: repo-scan-policy/v1
   dispatch: repo-explorer-dispatch/v1
   ingestResult: repo-harness-ingest-result/v1
   writeSubagentResult: repo-harness-write-subagent-result/v1
@@ -43,11 +45,13 @@ description: Orchestrate end-to-end understanding of a SINGLE repository into an
 npm run --silent understanding:harness -- <command> ...
 ```
 
-1. 静态扫描:
+1. L0 scout + L1 静态扫描:
 
 ```bash
 npm run --silent understanding:harness -- analyze --repo <repo-path> --out <package-dir>
 ```
+
+`analyze` 会先落 `repo-profile.json` 与 `scan-policy.json`,再生成 `inventory/code-map/fact-graph/gap-queue`。进入 dispatch 前必须检查 L0 识别:若 `repoKind`、`primaryLanguage`、`frameworks` 与仓库明显冲突,先停下修 profile/routing 问题,不要把后端仓库按前端默认继续扫。运行时支持可见 L0 worker 时,按 `repo-scout` skill 做浅分析复核;当前 harness 的确定性 baseline 仍是可执行兜底。
 
 2. 读取状态:
 

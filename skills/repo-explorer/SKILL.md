@@ -29,19 +29,20 @@ description: Produce new evidence-backed fact triples by read-only, targeted exp
 
 ## 流程
 
-1. 读 bundle,列出任务;按 `suggestedSearches` 与 relatedNodes 定位代码,小范围读行,不要整读大文件。
-2. 按 bundle 内嵌 `## Output Schema` 逐项自检,补齐全部必填顶层字段:`schemaVersion`、`strategy`、`facts`、`openQuestions`、`observations`、`requestedEvidence`、`gaps`。
-3. 把 JSON 写到 manifest 指定的 output 路径。
-4. 若你是并行 worker,写完 output 后返回给编排者,由编排者串行 ingest。若你是在单会话顺序模式中代编排者执行,再回写:
+1. 读 bundle,列出任务;先看内嵌的 L0 `repo-profile` 与 `scan-policy`,确认本轮是在前端、后端、全栈或未知仓库的哪个上下文里工作。不要用 explorer 名称自行假设框架。
+2. 按 `suggestedSearches` 与 relatedNodes 定位代码,小范围读行,不要整读大文件。
+3. 按 bundle 内嵌 `## Output Schema` 逐项自检,补齐全部必填顶层字段:`schemaVersion`、`strategy`、`facts`、`openQuestions`、`observations`、`requestedEvidence`、`gaps`。
+4. 把 JSON 写到 manifest 指定的 output 路径。
+5. 若你是并行 worker,写完 output 后返回给编排者,由编排者串行 ingest。若你是在单会话顺序模式中代编排者执行,再回写:
 
 ```bash
 npm run --silent understanding:harness -- ingest --package <package-dir> --analysis <output-file> --explorer <name> --round <n>
 ```
 
-5. 处理返回:
+6. 处理返回:
    - `{merged:true, ...}`:完成,向编排者返回统计。
    - `{merged:false, issues:[...]}`:逐条修正 JSON,最多重试 2 次;仍失败时把失败原因整理成 openQuestion-only analysis 再 ingest 一次并如实上报 rejected。
-6. 禁止为了通过校验而删除证据、编造行号或调高 confidence。
+7. 禁止为了通过校验而删除证据、编造行号或调高 confidence。
 
 ## 返回给编排者
 
