@@ -1,7 +1,7 @@
 {
   "schemaVersion": "repo-gap-queue/v1",
-  "generatedAt": "2026-07-08T03:15:58.091Z",
-  "repoId": "f8eda86659620a5862b1",
+  "generatedAt": "2026-07-09T08:20:36.644Z",
+  "repoId": "7d944bdd930e870797f0",
   "coverageScore": 0.615,
   "coverageThreshold": 0.85,
   "taskCount": 19,
@@ -183,7 +183,7 @@
       "id": "gap:139dbcfff5eb",
       "status": "open",
       "priority": "medium",
-      "explorer": "vue-containment",
+      "explorer": "auth-chain",
       "type": "semantic-hint",
       "reason": "src/components/GuardedButton.ts:4 may imply guarded-by (auth-guard); L2 must confirm before it becomes a FactGraph edge.",
       "relatedNodes": [
@@ -193,7 +193,7 @@
         "auth-guard",
         "src/components/GuardedButton.ts"
       ],
-      "tokenBudget": 12000
+      "tokenBudget": 14000
     },
     {
       "id": "gap:172bf4c77eec",
@@ -247,7 +247,7 @@
       "id": "gap:cd37adab3d20",
       "status": "open",
       "priority": "medium",
-      "explorer": "vue-containment",
+      "explorer": "auth-chain",
       "type": "semantic-hint",
       "reason": "src/components/GuardedButton.ts:3 may imply guarded-by (auth-guard); L2 must confirm before it becomes a FactGraph edge.",
       "relatedNodes": [
@@ -257,7 +257,7 @@
         "auth-guard",
         "src/components/GuardedButton.ts"
       ],
-      "tokenBudget": 12000
+      "tokenBudget": 14000
     },
     {
       "id": "gap:d0fc829fc147",
@@ -279,7 +279,7 @@
       "id": "gap:d231ad18bc1a",
       "status": "open",
       "priority": "medium",
-      "explorer": "vue-containment",
+      "explorer": "auth-chain",
       "type": "semantic-hint",
       "reason": "src/components/GuardedButton.ts:1 may imply guarded-by (auth-guard); L2 must confirm before it becomes a FactGraph edge.",
       "relatedNodes": [
@@ -289,7 +289,7 @@
         "auth-guard",
         "src/components/GuardedButton.ts"
       ],
-      "tokenBudget": 12000
+      "tokenBudget": 14000
     },
     {
       "id": "gap:d5ce2419215c",

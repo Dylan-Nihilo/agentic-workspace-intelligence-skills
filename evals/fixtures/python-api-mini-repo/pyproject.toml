@@ -1,0 +1,7 @@
+[project]
+name = "python-api-mini-repo"
+version = "1.0.0"
+dependencies = [
+  "fastapi>=0.111",
+  "uvicorn>=0.30"
+]

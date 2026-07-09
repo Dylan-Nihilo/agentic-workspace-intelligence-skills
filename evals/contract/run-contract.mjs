@@ -22,6 +22,11 @@ const normalizeCodingPoolScript = path.join(repoRoot, 'skills', 'agentic-coding-
 const datasourcePipelineScript = path.join(repoRoot, 'skills', 'agentic-datasource-orchestrator', 'scripts', 'run-pipeline.mjs')
 const ceBridgeScript = path.join(repoRoot, 'skills', 'agentic-ce-bridge', 'scripts', 'run-ce-analysis.mjs')
 const fixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'mini-repo')
+const javaFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'java-mini-repo')
+const reactFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'react-mini-repo')
+const nodeApiFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'node-api-mini-repo')
+const pythonApiFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'python-api-mini-repo')
+const goServiceFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'go-service-mini-repo')
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-contract-eval-'))
 const packageDir = path.join(workDir, 'package')
 
@@ -33,6 +38,7 @@ try {
   assertIncludes(expectations.nextActions, dispatchStatus.nextAction, 'status nextAction enum')
   assertEqual(dispatchStatus.nextAction, 'dispatch', 'status nextAction after analyze')
   assertRegistryContracts(packageDir)
+  assertGenericScoutRouting()
 
   const dispatch = runHarnessJson(['dispatch', '--package', packageDir, '--max-tasks', '3'])
   assertEqual(dispatch.schemaVersion, expectations.dispatchSchemaVersion, 'dispatch schemaVersion')
@@ -378,6 +384,90 @@ function assertRegistryContracts(packageDir) {
   assertDisabledExplorerBehavior(packageDir)
   assertUnknownExplorerConfigFails(packageDir)
   assertEffortConfigOverride(packageDir)
+}
+
+function assertGenericScoutRouting() {
+  const cases = [
+    {
+      name: 'java-service',
+      repo: javaFixtureRepo,
+      repoKind: 'backend',
+      primaryLanguage: 'Java',
+      frameworks: ['maven', 'spring'],
+      enabledScanners: ['java', 'xml', 'backend'],
+      forbiddenExplorers: ['vue-containment', 'component-structure'],
+      reportMustInclude: '后端仓库',
+      reportMustNotInclude: '前端项目',
+    },
+    {
+      name: 'react-app',
+      repo: reactFixtureRepo,
+      repoKind: 'frontend',
+      primaryLanguage: 'React TS',
+      frameworks: ['node', 'react'],
+      enabledScanners: ['javascript', 'typescript', 'react'],
+      forbiddenExplorers: ['vue-containment'],
+      requiredExplorers: ['component-structure'],
+    },
+    {
+      name: 'node-api',
+      repo: nodeApiFixtureRepo,
+      repoKind: 'backend',
+      primaryLanguage: 'TypeScript',
+      frameworks: ['node', 'node-server'],
+      enabledScanners: ['javascript', 'typescript', 'backend'],
+      forbiddenExplorers: ['vue-containment', 'component-structure'],
+    },
+    {
+      name: 'python-api',
+      repo: pythonApiFixtureRepo,
+      repoKind: 'backend',
+      primaryLanguage: 'Python',
+      frameworks: ['python', 'python-web'],
+      enabledScanners: ['python', 'backend'],
+      forbiddenExplorers: ['vue-containment', 'component-structure'],
+    },
+    {
+      name: 'go-service',
+      repo: goServiceFixtureRepo,
+      repoKind: 'backend',
+      primaryLanguage: 'Go',
+      frameworks: ['go', 'go-web'],
+      enabledScanners: ['go', 'backend'],
+      forbiddenExplorers: ['vue-containment', 'component-structure'],
+    },
+  ]
+
+  for (const item of cases) {
+    const out = path.join(workDir, `${item.name}-profile-package`)
+    runHarness(['analyze', '--repo', item.repo, '--out', out, '--max-files', '2000'])
+    const profile = readJson(path.join(out, 'repo-profile.json'))
+    const scanPolicy = readJson(path.join(out, 'scan-policy.json'))
+    const gapQueue = readJson(path.join(out, 'gap-queue.json'))
+    assertEqual(profile.schemaVersion, 'repo-scout-profile/v1', `${item.name} profile schemaVersion`)
+    assertEqual(scanPolicy.schemaVersion, 'repo-scan-policy/v1', `${item.name} scan-policy schemaVersion`)
+    assertEqual(profile.repoKind, item.repoKind, `${item.name} repoKind`)
+    assertEqual(scanPolicy.repoKind, item.repoKind, `${item.name} scan policy repoKind`)
+    assertEqual(profile.primaryLanguage, item.primaryLanguage, `${item.name} primaryLanguage`)
+    for (const framework of item.frameworks || []) {
+      assert((profile.frameworks || []).some(entry => entry.name === framework), `${item.name} profile should detect ${framework}`)
+    }
+    for (const scanner of item.enabledScanners || []) {
+      assert(scanPolicy.enabledScanners?.[scanner] === true, `${item.name} should enable ${scanner} scanner`)
+    }
+    for (const explorer of item.forbiddenExplorers || []) {
+      assert(!(gapQueue.tasks || []).some(task => task.explorer === explorer), `${item.name} must not dispatch ${explorer} tasks`)
+    }
+    for (const explorer of item.requiredExplorers || []) {
+      assert((gapQueue.tasks || []).some(task => task.explorer === explorer), `${item.name} should dispatch ${explorer} tasks`)
+    }
+    if (item.reportMustInclude || item.reportMustNotInclude) {
+      runHarness(['report', '--package', out])
+      const report = fs.readFileSync(path.join(out, 'report.md'), 'utf8')
+      if (item.reportMustInclude) assert(report.includes(item.reportMustInclude), `${item.name} report should include ${item.reportMustInclude}`)
+      if (item.reportMustNotInclude) assert(!report.includes(item.reportMustNotInclude), `${item.name} report must not include ${item.reportMustNotInclude}`)
+    }
+  }
 }
 
 function assertRegistryEffortComplete() {
