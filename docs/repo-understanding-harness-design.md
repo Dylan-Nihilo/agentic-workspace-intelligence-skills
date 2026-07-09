@@ -41,6 +41,8 @@ out/<repo>/
 ## Commands
 
 ```bash
+npm run understanding:harness -- scout --repo /path/to/repo --out outputs/code-understanding/repo-name
+npm run understanding:harness -- ingest-scout --package outputs/code-understanding/repo-name --analysis outputs/code-understanding/repo-name/scout/output.json
 npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/repo-name
 npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/repo-name --incremental --base HEAD
 npm run understanding:harness -- project --package outputs/code-understanding/repo-name --only all

@@ -13,18 +13,21 @@ The rule is: facts are unified, consumers are projections. New output must be de
 
 ```text
 repo
-  -> L0 scout: repo-profile + scan-policy from manifests, language mix, entrypoints, runtime signals
+  -> L0 scout request: deterministic inventory/code-map context for a visible repo-scout agent
+  -> L0 scout ingest: agent-authored repo-profile + scan-policy
   -> L1 scanner: inventory + code-map + static facts + gap queue routed by scan-policy
   -> L2 explorer: structured facts[] + openQuestions[] from gap tasks
   -> L3 merger: schema checks + entity alignment + confidence merge + adversarial verification
   -> L4 projector: wiki/ + human-readable.html + render-graph.json + knowledge-index.jsonl
 ```
 
-The harness keeps Codex as the runtime for L2. It does not silently spawn agents. It generates an exploration request, accepts structured JSON back, fetches safe evidence, and merges facts into the graph.
+The harness does not silently spawn agents. It generates an L0 scout request and later L2 exploration requests, accepts structured JSON back, fetches safe evidence, and merges facts into the graph. Deterministic scan data is evidence material for agents, not the semantic scout result.
 
 ## Commands
 
 ```bash
+npm run understanding:harness -- scout --repo /path/to/repo --out outputs/code-understanding/repo-name
+npm run understanding:harness -- ingest-scout --package outputs/code-understanding/repo-name --analysis outputs/code-understanding/repo-name/scout/output.json
 npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/repo-name
 npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/repo-name --incremental --base HEAD
 npm run understanding:harness -- project --package outputs/code-understanding/repo-name --only all
@@ -34,6 +37,8 @@ npm run understanding:harness -- serve --package outputs/code-understanding/repo
 ```
 
 Incremental analyze reuses the previous `fact-graph.json`, invalidates changed file nodes and their related edges, rescans only the changed file set, then regenerates all projections.
+
+`analyze` requires an accepted agent scout output by default. `--allow-baseline-scout` exists only for compatibility tests and should not be used for real repository understanding.
 
 Compatibility scripts still work:
 
@@ -52,6 +57,12 @@ npm run understanding:validate -- --package outputs/code-understanding/repo-name
 
 ```text
 out/<repo>/
+  scout/
+    context.json
+    request.md
+    output.json
+    deterministic-hints.profile.json
+    deterministic-hints.scan-policy.json
   inventory.json
   repo-profile.json
   scan-policy.json

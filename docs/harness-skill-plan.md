@@ -115,10 +115,11 @@ harness status --package <dir>
 
 - **触发**:用户要求"理解/分析这个仓库"、"生成 repo wiki/图谱/知识索引"。
 - **流程**(写死在 SKILL.md):
-  1. `harness analyze --repo <path> --out <package>`
-  2. 循环(最多 `maxExplorerRounds` 轮):`harness status` → nextAction=dispatch 时执行 `harness dispatch`;读 manifest;**若运行时支持并行子代理:每个 explorer bundle 派一个子代理(加载 repo-explorer skill)并行处理;否则本会话按 bundle 顺序自己执行 repo-explorer 流程**;全部 ingest 后进入下一轮。
-  3. adversarial-verify 类任务派给 repo-fact-verifier(同样的并行/降级规则)。
-  4. `harness verify`;通过后执行 repo-synthesizer 流程;最后 `harness report`。
+  1. `harness scout --repo <path> --out <package>`;把 `scout/request.md` 派给可见 `repo-scout` worker;worker 写 `scout/output.json`;编排者执行 `harness ingest-scout --package <package> --analysis <package>/scout/output.json`。
+  2. `harness analyze --repo <path> --out <package>`。
+  3. 循环(最多 `maxExplorerRounds` 轮):`harness status` → nextAction=dispatch 时执行 `harness dispatch`;读 manifest;**若运行时支持并行子代理:每个 explorer bundle 派一个子代理(加载 repo-explorer skill)并行处理;否则本会话按 bundle 顺序自己执行 repo-explorer 流程**;全部 ingest 后进入下一轮。
+  4. adversarial-verify 类任务派给 repo-fact-verifier(同样的并行/降级规则)。
+  5. `harness verify`;通过后执行 repo-synthesizer 流程;最后 `harness report`。
 - **红线段落**:上文 4 条不变量 + "status 的 nextAction 是唯一循环依据,禁止自行判断 coverage"。
 
 ### S-2 `repo-explorer`(L2 探索 worker)

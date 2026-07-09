@@ -11,7 +11,7 @@
 
 <br/>
 
-`静态扫描` → `定向探索` → `对抗验证` → `业务综合` → `人读呈现`
+`agent scout` → `结构扫描` → `定向探索` → `对抗验证` → `业务综合` → `人读呈现`
 
 <sub>一条闭环,从代码仓库到 human-readable.html —— 不落一堆没人消费的数据</sub>
 
@@ -41,7 +41,7 @@ agent 会驱动完整闭环,最后交给你:
 
 | 原则 | 落地方式 |
 |---|---|
-| 🧭 **确定性骨架,LLM 叶子** | 路由、调度、合并、验证、渲染全是死代码;LLM 只出现在两类叶子节点——探索(产出带证据的事实)与综合(产出业务解读) |
+| 🧭 **确定性骨架,LLM 叶子** | 调度、合并、验证、渲染全是死代码;LLM 出现在 L0 scout、探索(产出带证据的事实)与综合(产出业务解读) |
 | 🔒 **无证据不成事实** | 四层门禁:schema 校验 → 证据行范围检查 → 确定性 verifier → 对抗校验。弱模型污染不了事实图,最坏只是产出变少 |
 | 🧩 **声明优于硬编码** | explorer / 谓词 / 投影三条扩展轴收敛在[注册表](shared/understanding/harness-registry.mjs)里;加节点改一处,删节点是可逆降级,漏改由契约测试报红 |
 | 💰 **算力按需分档** | 每个任务带 `effort` 先验(机械任务 low,裁决综合 high),编排 agent 可裁量调整——裁决与综合永不降档,因为它们的错误没有下游兜底 |
@@ -52,7 +52,8 @@ agent 会驱动完整闭环,最后交给你:
 
 ```mermaid
 flowchart LR
-  repo(["目标仓库<br/>只读"]) --> L1["L1 静态扫描<br/>inventory · code-map · 静态事实"]
+  repo(["目标仓库<br/>只读"]) --> L0["L0 agent scout<br/>repo-profile · scan-policy"]
+  L0 --> L1["L1 结构扫描<br/>inventory · code-map · 显式事实"]
   L1 --> Q["gap 队列<br/>覆盖缺口 + 语义线索"]
   Q --> D["dispatch<br/>按 explorer 分组 · 带 effort 档位"]
   D --> E["L2 探索<br/>8 类 explorer 并行"]
@@ -71,7 +72,7 @@ flowchart LR
   classDef gate fill:#fef3c7,stroke:#d97706,color:#7c4a03
   classDef truth fill:#dcfce7,stroke:#16a34a,color:#14532d
   class L1,Q,D,P,H,W det
-  class E,V,S llm
+  class L0,E,V,S llm
   class G1,G2 gate
   class FG truth
 ```
@@ -84,16 +85,20 @@ flowchart LR
 # 0. 契约自检(全部断言应绿)
 npm run eval:contract
 
-# 1. 静态扫描,生成理解包
+# 1. 生成 L0 scout request,交给 repo-scout agent 写 scout/output.json 后 ingest
+npm run understanding:harness -- scout --repo /path/to/repo --out outputs/code-understanding/my-repo
+npm run understanding:harness -- ingest-scout --package outputs/code-understanding/my-repo --analysis outputs/code-understanding/my-repo/scout/output.json
+
+# 2. L1 扫描与建图
 npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/my-repo
 
-# 2. 看下一步该做什么(dispatch / synthesize / done)
+# 3. 看下一步该做什么(dispatch / synthesize / done)
 npm run understanding:harness -- status --package outputs/code-understanding/my-repo
 
-# 3. 派发探索任务(产出 runtime 中立的 bundle,由 agent 或子代理执行后 ingest 回来)
+# 4. 派发探索任务(产出 runtime 中立的 bundle,由 agent 或子代理执行后 ingest 回来)
 npm run understanding:harness -- dispatch --package outputs/code-understanding/my-repo
 
-# 4. 综合完成后,渲染人读页面(闭环收尾)
+# 5. 综合完成后,渲染人读页面(闭环收尾)
 npm run understanding:harness -- html --package outputs/code-understanding/my-repo
 ```
 

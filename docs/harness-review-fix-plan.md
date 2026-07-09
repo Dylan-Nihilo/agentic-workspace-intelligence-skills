@@ -235,6 +235,8 @@
 
 **最终整体验收**(全部完成后执行):
 ```bash
+npm run understanding:harness -- scout --repo "/Users/c0007/Desktop/yeepay projects/mp/frontend/mp-merchant-access" --out /tmp/mp-merchant-access-v2
+npm run understanding:harness -- ingest-scout --package /tmp/mp-merchant-access-v2 --analysis /tmp/mp-merchant-access-v2/scout/output.json
 npm run understanding:harness -- analyze --repo "/Users/c0007/Desktop/yeepay projects/mp/frontend/mp-merchant-access" --out /tmp/mp-merchant-access-v2
 npm run understanding:harness -- verify --package /tmp/mp-merchant-access-v2
 ```
