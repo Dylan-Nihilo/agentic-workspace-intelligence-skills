@@ -31,7 +31,8 @@ const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-contract-eval-'))
 const packageDir = path.join(workDir, 'package')
 
 try {
-  runHarness(['analyze', '--repo', fixtureRepo, '--out', packageDir, '--max-files', '2000'])
+  assertAgentScoutRequired()
+  prepareScoutAndAnalyze(fixtureRepo, packageDir)
 
   const dispatchStatus = runHarnessJson(['status', '--package', packageDir])
   assertEqual(dispatchStatus.schemaVersion, expectations.statusSchemaVersion, 'status schemaVersion')
@@ -301,6 +302,10 @@ try {
       expectations.explorationAnalysisSchemaVersion,
       expectations.adversarialVerificationSchemaVersion,
       `externalVerifiedTool:${expectations.externalVerifiedTool}`,
+      'scout:agent-required',
+      'scout:deterministic-hint-rejected',
+      'scout:stale-baseline-rejected',
+      'scout:ingest-agent-output',
       'verifier-spoof:deterministic-tag-sanitized',
       'coding-pool:golden',
       'coding-pool:invalid-evidenceRefs',
@@ -347,7 +352,7 @@ function runHarness(args, options = {}) {
       result.stderr,
     ].filter(Boolean).join('\n'))
   }
-  return result.stdout
+  return options.includeStderr ? `${result.stdout}${result.stderr}` : result.stdout
 }
 
 function runHarnessJson(args, options = {}) {
@@ -357,6 +362,68 @@ function runHarnessJson(args, options = {}) {
   } catch (error) {
     throw new Error(`Expected JSON from harness ${args.join(' ')}:\n${stdout}`)
   }
+}
+
+function prepareScoutAndAnalyze(repo, out) {
+  const scout = runHarnessJson(['scout', '--repo', repo, '--out', out, '--max-files', '2000'])
+  assertEqual(scout.schemaVersion, 'repo-scout-dispatch/v1', 'scout schemaVersion')
+  assert(fs.existsSync(scout.promptPath), 'scout promptPath should exist')
+  assert(fs.existsSync(scout.contextPath), 'scout contextPath should exist')
+  const scoutOutput = writeContractScoutOutput(out)
+  const ingested = runHarnessJson(['ingest-scout', '--package', out, '--analysis', scoutOutput])
+  assertEqual(ingested.schemaVersion, 'repo-scout-ingest-result/v1', 'ingest-scout schemaVersion')
+  assertEqual(ingested.merged, true, 'ingest-scout merged')
+  runHarness(['analyze', '--repo', repo, '--out', out, '--max-files', '2000'])
+}
+
+function assertAgentScoutRequired() {
+  const missingScoutPackage = path.join(workDir, 'missing-scout-package')
+  const missing = runHarness(['analyze', '--repo', fixtureRepo, '--out', missingScoutPackage, '--max-files', '2000'], { expectExit: 2, includeStderr: true })
+  assert(missing.includes('Missing agent scout profile'), 'analyze without scout should fail with missing scout message')
+
+  const deterministicPackage = path.join(workDir, 'deterministic-scout-package')
+  runHarnessJson(['scout', '--repo', fixtureRepo, '--out', deterministicPackage, '--max-files', '2000'])
+  writeJson(path.join(deterministicPackage, 'repo-profile.json'), readJson(path.join(deterministicPackage, 'scout', 'deterministic-hints.profile.json')))
+  writeJson(path.join(deterministicPackage, 'scan-policy.json'), readJson(path.join(deterministicPackage, 'scout', 'deterministic-hints.scan-policy.json')))
+  const staleBaseline = runHarness(['analyze', '--repo', fixtureRepo, '--out', deterministicPackage, '--max-files', '2000'], { expectExit: 2, includeStderr: true })
+  assert(staleBaseline.includes('Missing agent scout profile'), 'analyze must reject stale deterministic-baseline profile files')
+  const rejected = runHarnessJson([
+    'ingest-scout',
+    '--package', deterministicPackage,
+    '--analysis', path.join(deterministicPackage, 'scout', 'deterministic-hints.profile.json'),
+  ], { expectExit: 2 })
+  assertEqual(rejected.schemaVersion, 'repo-scout-ingest-result/v1', 'deterministic scout rejection schemaVersion')
+  assertEqual(rejected.merged, false, 'deterministic scout rejection merged')
+  assert(rejected.issues.some(issue => /deterministic-baseline/.test(issue.message || '')), 'deterministic scout rejection should mention deterministic-baseline')
+}
+
+function writeContractScoutOutput(packageDir) {
+  const profile = readJson(path.join(packageDir, 'scout', 'deterministic-hints.profile.json'))
+  const scanPolicy = readJson(path.join(packageDir, 'scout', 'deterministic-hints.scan-policy.json'))
+  profile.producedBy = {
+    ...(profile.producedBy || {}),
+    role: 'repo-scout',
+    mode: 'agent-contract-fixture',
+    runtime: 'contract-eval',
+  }
+  scanPolicy.producedBy = {
+    ...(scanPolicy.producedBy || {}),
+    role: 'repo-scout',
+    sourceProfile: profile.schemaVersion,
+    mode: 'agent-contract-fixture',
+    runtime: 'contract-eval',
+  }
+  const output = {
+    schemaVersion: 'repo-scout-agent-output/v1',
+    generatedAt: new Date().toISOString(),
+    strategy: 'contract fixture simulates a repo-scout agent after reading scout/request.md',
+    profile,
+    scanPolicy,
+    warnings: [],
+  }
+  const outputPath = path.join(packageDir, 'scout', 'contract-agent-output.json')
+  writeJson(outputPath, output)
+  return outputPath
 }
 
 function assertExplorerOutputSchema() {
@@ -440,11 +507,12 @@ function assertGenericScoutRouting() {
 
   for (const item of cases) {
     const out = path.join(workDir, `${item.name}-profile-package`)
-    runHarness(['analyze', '--repo', item.repo, '--out', out, '--max-files', '2000'])
+    prepareScoutAndAnalyze(item.repo, out)
     const profile = readJson(path.join(out, 'repo-profile.json'))
     const scanPolicy = readJson(path.join(out, 'scan-policy.json'))
     const gapQueue = readJson(path.join(out, 'gap-queue.json'))
     assertEqual(profile.schemaVersion, 'repo-scout-profile/v1', `${item.name} profile schemaVersion`)
+    assert(profile.producedBy?.mode !== 'deterministic-baseline', `${item.name} profile must come from agent scout output`)
     assertEqual(scanPolicy.schemaVersion, 'repo-scan-policy/v1', `${item.name} scan-policy schemaVersion`)
     assertEqual(profile.repoKind, item.repoKind, `${item.name} repoKind`)
     assertEqual(scanPolicy.repoKind, item.repoKind, `${item.name} scan policy repoKind`)
