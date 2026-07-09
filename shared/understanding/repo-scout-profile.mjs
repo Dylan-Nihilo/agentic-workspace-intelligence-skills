@@ -2,6 +2,8 @@ import path from 'node:path'
 
 export const REPO_SCOUT_PROFILE_SCHEMA = 'repo-scout-profile/v1'
 export const REPO_SCAN_POLICY_SCHEMA = 'repo-scan-policy/v1'
+export const REPO_SCOUT_CONTEXT_SCHEMA = 'repo-scout-context/v1'
+export const REPO_SCOUT_AGENT_OUTPUT_SCHEMA = 'repo-scout-agent-output/v1'
 
 export function buildRepoScoutProfile({ repo, inventory, codeMap, generatedAt = new Date().toISOString() }) {
   const manifests = codeMap?.manifests || inventory?.manifests || []
@@ -97,6 +99,138 @@ export function buildScanPolicy(profile) {
   }
 }
 
+export function buildRepoScoutContext({ repo, inventory, codeMap, deterministicProfile = null, deterministicScanPolicy = null, snippets = {}, generatedAt = new Date().toISOString() }) {
+  const files = inventory?.files || []
+  const manifests = codeMap?.manifests || inventory?.manifests || []
+  const topDirectories = (inventory?.directories || [])
+    .filter(dir => dir.path === '.' || !dir.path.includes('/'))
+    .slice(0, 80)
+  const highSignalFiles = files
+    .filter(file => isScoutSignalFile(file.path, file.category))
+    .slice(0, 120)
+    .map(file => ({
+      path: file.path,
+      language: file.language,
+      category: file.category,
+      lines: file.lines,
+      protected: Boolean(file.protected),
+    }))
+  return {
+    schemaVersion: REPO_SCOUT_CONTEXT_SCHEMA,
+    generatedAt,
+    repo,
+    counts: inventory?.counts || {},
+    directories: topDirectories,
+    manifests,
+    dependencies: codeMap?.dependencies || [],
+    entrypoints: codeMap?.entrypoints || [],
+    routes: codeMap?.routes || [],
+    imports: (codeMap?.imports || []).slice(0, 200),
+    sourceRoots: inferSourceRoots(inventory),
+    highSignalFiles,
+    snippets,
+    deterministicHints: {
+      profile: deterministicProfile,
+      scanPolicy: deterministicScanPolicy,
+      usage: 'hints-only; agent must verify and may override',
+    },
+  }
+}
+
+export function renderRepoScoutPrompt(context, outputPath) {
+  return [
+    '# Repo Scout L0 Agent Task',
+    '',
+    'You are the L0 repo scout. Produce the repository profile and scan policy before L1 scanning.',
+    '',
+    'Rules:',
+    '- Read only. Do not install dependencies, run builds, run tests, start servers, or use the network.',
+    '- Use the deterministic context as evidence material, not as the final answer.',
+    '- Inspect README/manifests/entry files when needed. Do not classify a repo from filename heuristics alone.',
+    '- Every claim must be grounded in manifest, directory, entrypoint, route, import, or README evidence.',
+    '- Protected files may be mentioned only as existing metadata; do not infer values from them.',
+    '',
+    `Write JSON to: ${outputPath}`,
+    '',
+    'Required JSON shape:',
+    JSON.stringify({
+      schemaVersion: REPO_SCOUT_AGENT_OUTPUT_SCHEMA,
+      strategy: 'short explanation of what was inspected',
+      profile: {
+        schemaVersion: REPO_SCOUT_PROFILE_SCHEMA,
+        producedBy: { role: 'repo-scout', mode: 'agent' },
+        repoKind: 'frontend|backend|fullstack|unknown',
+        primaryLanguage: 'TypeScript',
+        languages: {},
+        frameworks: [{ name: 'framework-name', category: 'frontend|backend|platform|build-system', evidenceRefs: ['evidence:file:package.json'] }],
+        buildSystems: [],
+        runtimeShape: [],
+        routeStyle: 'unknown',
+        sourceRoots: [],
+        aliases: [],
+        entrypoints: [],
+        evidenceRefs: [],
+        confidence: 0.8,
+        warnings: [],
+      },
+      scanPolicy: {
+        schemaVersion: REPO_SCAN_POLICY_SCHEMA,
+        repoKind: 'frontend|backend|fullstack|unknown',
+        enabledScanners: {},
+        importResolution: {},
+        explorerRouting: {},
+        reportProjection: {},
+        evidenceRefs: [],
+      },
+      warnings: [],
+    }, null, 2),
+    '',
+    'Scout context:',
+    JSON.stringify(context, null, 2),
+  ].join('\n')
+}
+
+export function normalizeRepoScoutAgentOutput(value, fallback = {}) {
+  const output = value?.schemaVersion === REPO_SCOUT_AGENT_OUTPUT_SCHEMA
+    ? value
+    : {
+        schemaVersion: REPO_SCOUT_AGENT_OUTPUT_SCHEMA,
+        strategy: value?.strategy || 'repo-scout agent output normalized from profile payload',
+        profile: value?.profile || value?.repoProfile || value,
+        scanPolicy: value?.scanPolicy,
+        warnings: value?.warnings || [],
+      }
+  const profile = normalizeScoutProfile(output.profile, fallback)
+  const scanPolicy = output.scanPolicy
+    ? normalizeScanPolicy(output.scanPolicy, profile, fallback)
+    : buildScanPolicy(profile)
+  return {
+    schemaVersion: REPO_SCOUT_AGENT_OUTPUT_SCHEMA,
+    generatedAt: output.generatedAt || fallback.generatedAt || profile.generatedAt || new Date().toISOString(),
+    strategy: String(output.strategy || '').trim() || 'repo-scout agent classification',
+    profile,
+    scanPolicy,
+    warnings: Array.isArray(output.warnings) ? output.warnings : [],
+  }
+}
+
+export function validateRepoScoutAgentOutput(value) {
+  const issues = []
+  if (value?.schemaVersion !== REPO_SCOUT_AGENT_OUTPUT_SCHEMA) issues.push('Scout output schemaVersion is invalid')
+  const profile = value?.profile
+  const scanPolicy = value?.scanPolicy
+  if (!profile || typeof profile !== 'object') issues.push('Scout output profile is missing')
+  if (!scanPolicy || typeof scanPolicy !== 'object') issues.push('Scout output scanPolicy is missing')
+  if (profile && profile.schemaVersion !== REPO_SCOUT_PROFILE_SCHEMA) issues.push('Scout profile schemaVersion is invalid')
+  if (scanPolicy && scanPolicy.schemaVersion !== REPO_SCAN_POLICY_SCHEMA) issues.push('Scout scanPolicy schemaVersion is invalid')
+  if (profile && !['frontend', 'backend', 'fullstack', 'unknown'].includes(profile.repoKind)) issues.push(`Scout profile repoKind is invalid: ${profile.repoKind}`)
+  if (profile && !profile.primaryLanguage) issues.push('Scout profile primaryLanguage is missing')
+  if (profile && (!Array.isArray(profile.evidenceRefs) || profile.evidenceRefs.length === 0)) issues.push('Scout profile evidenceRefs is empty')
+  if (scanPolicy && profile && scanPolicy.repoKind !== profile.repoKind) issues.push(`Scout scanPolicy repoKind ${scanPolicy.repoKind} does not match profile ${profile.repoKind}`)
+  if (profile?.producedBy?.mode === 'deterministic-baseline') issues.push('Scout profile must be produced by an agent, not deterministic-baseline')
+  return issues
+}
+
 export function readRepoProfileFromPackage(readJsonIfExists, packageDir) {
   return readJsonIfExists(path.join(packageDir, 'repo-profile.json'))
     || readJsonIfExists(path.join(packageDir, 'static', 'repo-profile.json'))
@@ -105,6 +239,63 @@ export function readRepoProfileFromPackage(readJsonIfExists, packageDir) {
 export function readScanPolicyFromPackage(readJsonIfExists, packageDir) {
   return readJsonIfExists(path.join(packageDir, 'scan-policy.json'))
     || readJsonIfExists(path.join(packageDir, 'static', 'scan-policy.json'))
+}
+
+function normalizeScoutProfile(profile, fallback) {
+  const generatedAt = profile?.generatedAt || fallback.generatedAt || new Date().toISOString()
+  return {
+    schemaVersion: REPO_SCOUT_PROFILE_SCHEMA,
+    generatedAt,
+    producedBy: {
+      ...(profile?.producedBy || {}),
+      role: 'repo-scout',
+      mode: profile?.producedBy?.mode || 'agent',
+    },
+    repo: profile?.repo || fallback.repo || null,
+    repoKind: profile?.repoKind || 'unknown',
+    primaryLanguage: profile?.primaryLanguage || 'Unknown',
+    languages: profile?.languages || fallback.languages || {},
+    frameworks: Array.isArray(profile?.frameworks) ? profile.frameworks : [],
+    buildSystems: Array.isArray(profile?.buildSystems) ? profile.buildSystems : [],
+    runtimeShape: Array.isArray(profile?.runtimeShape) ? profile.runtimeShape : [],
+    routeStyle: profile?.routeStyle || 'unknown',
+    sourceRoots: Array.isArray(profile?.sourceRoots) ? profile.sourceRoots : [],
+    aliases: Array.isArray(profile?.aliases) ? profile.aliases : [],
+    entrypoints: Array.isArray(profile?.entrypoints) ? profile.entrypoints : [],
+    evidenceRefs: dedupeStrings(profile?.evidenceRefs || []),
+    confidence: finiteConfidence(profile?.confidence, 0.7),
+    warnings: Array.isArray(profile?.warnings) ? profile.warnings : [],
+  }
+}
+
+function normalizeScanPolicy(scanPolicy, profile, fallback) {
+  const generatedAt = scanPolicy?.generatedAt || profile.generatedAt || fallback.generatedAt || new Date().toISOString()
+  return {
+    ...buildScanPolicy(profile),
+    ...scanPolicy,
+    schemaVersion: REPO_SCAN_POLICY_SCHEMA,
+    generatedAt,
+    producedBy: {
+      role: 'repo-scout',
+      sourceProfile: profile.schemaVersion,
+      ...(scanPolicy?.producedBy || {}),
+    },
+    repo: scanPolicy?.repo || profile.repo || fallback.repo || null,
+    repoKind: scanPolicy?.repoKind || profile.repoKind,
+    evidenceRefs: dedupeStrings(scanPolicy?.evidenceRefs || profile.evidenceRefs || []),
+  }
+}
+
+function isScoutSignalFile(filePath, category) {
+  return /(^|\/)(README|AGENTS|CLAUDE|package\.json|composer\.json|pom\.xml|build\.gradle|settings\.gradle|go\.mod|Cargo\.toml|Gemfile|pyproject\.toml|requirements\.txt|Dockerfile|docker-compose\.ya?ml|\.gitlab-ci\.yml|Jenkinsfile|[^/]+\.csproj)$/i.test(filePath)
+    || /(^|\/)(src|app|cmd|internal|server|api|backend|frontend|web|config|conf|resources)(\/|$)/i.test(filePath)
+    || ['config', 'docs', 'script'].includes(category)
+}
+
+function finiteConfidence(value, fallback) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(0, Math.min(1, value))
+    : fallback
 }
 
 function detectFrameworks(dependencies, manifests) {

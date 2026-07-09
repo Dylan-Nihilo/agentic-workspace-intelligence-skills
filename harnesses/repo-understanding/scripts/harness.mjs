@@ -9,7 +9,9 @@ import {
   buildRequestForPackage,
   collectRepoUnderstanding,
   defaultPackageDir,
+  ingestRepoScoutOutput,
   parseCommonArgs,
+  prepareRepoScoutPackage,
   writeAnalysis,
   writeValidation,
 } from '../../../shared/understanding/repo-understanding-core.mjs'
@@ -26,7 +28,9 @@ import {
 
 function usage() {
   console.error(`Usage:
-  harness analyze --repo /path/to/repo [--out /path/to/package] [--max-files 16000] [--incremental] [--base HEAD]
+  harness scout --repo /path/to/repo [--out /path/to/package] [--max-files 16000]
+  harness ingest-scout --package /path/to/package --analysis /path/to/scout-output.json
+  harness analyze --repo /path/to/repo [--out /path/to/package] [--max-files 16000] [--incremental] [--base HEAD] [--allow-baseline-scout]
   harness project --package /path/to/package [--only ${[...projectionNames(), 'all'].join('|')}]
   harness status --package /path/to/package
   harness dispatch --package /path/to/package [--max-tasks 40] [--explorers a,b,c]
@@ -53,6 +57,8 @@ function main() {
   const command = process.argv[2]
   if (!command || command === '--help' || command === '-h') usage()
   const argv = [process.argv[0], process.argv[1], ...process.argv.slice(3)]
+  if (command === 'scout') return scout(argv)
+  if (command === 'ingest-scout') return ingestScout(argv)
   if (command === 'analyze') return analyze(argv)
   if (command === 'project') return project(argv)
   if (command === 'status') return status(argv)
@@ -83,7 +89,20 @@ function analyze(argv) {
   const incremental = args.incremental
     ? buildIncrementalPlan(repoPath, args.base || 'HEAD', previousFactGraph, previousCodeMap)
     : null
-  const result = collectRepoUnderstanding({ repoPath, outDir, maxFiles, incremental })
+  let result
+  try {
+    result = collectRepoUnderstanding({
+      repoPath,
+      outDir,
+      maxFiles,
+      incremental,
+      allowBaselineScout: Boolean(args['allow-baseline-scout']),
+    })
+  } catch (err) {
+    console.error(err.message || err)
+    process.exitCode = 2
+    return
+  }
   if (incremental) writeIncrementalReport(outDir, incremental, result.factGraph)
   const validation = writeValidation(result.packageDir)
   console.log(`Analyzed ${repoPath}`)
@@ -93,6 +112,36 @@ function analyze(argv) {
   console.log(`Render graph: ${result.renderGraph.nodes.length} nodes, ${result.renderGraph.edges.length} edges`)
   console.log(`Validation passed: ${validation.passed}`)
   if (!validation.passed) process.exitCode = 2
+}
+
+function scout(argv) {
+  const args = parseArgs(argv, ['repo'])
+  const repoPath = path.resolve(args.repo)
+  const outDir = args.out ? path.resolve(args.out) : defaultPackageDir(repoPath)
+  const maxFiles = args['max-files'] ? Number(args['max-files']) : 16000
+  if (!Number.isFinite(maxFiles)) usage()
+  const result = prepareRepoScoutPackage({ repoPath, outDir, maxFiles })
+  console.log(JSON.stringify(result, null, 2))
+}
+
+function ingestScout(argv) {
+  const args = parseArgs(argv, ['package', 'analysis'])
+  try {
+    const result = ingestRepoScoutOutput({
+      packageDir: path.resolve(args.package),
+      analysisPath: args.analysis === '-' ? undefined : path.resolve(args.analysis),
+      value: args.analysis === '-' ? readAnalysisInput('-') : null,
+    })
+    console.log(JSON.stringify(result, null, 2))
+    if (!result.merged) process.exitCode = 2
+  } catch (err) {
+    console.log(JSON.stringify({
+      schemaVersion: 'repo-scout-ingest-result/v1',
+      merged: false,
+      issues: schemaIssuesFromError(err),
+    }, null, 2))
+    process.exitCode = 2
+  }
 }
 
 function project(argv) {
@@ -614,8 +663,8 @@ function renderHarnessReport(packageDir, validation) {
   lines.push('## 3. 执行链路')
   lines.push('')
   lines.push(markdownTable(['阶段', '命令/动作'], [
-    ['L0 scout', 'repo-scout profile + scan-policy'],
-    ['L1 analyze', 'harness analyze --repo ... --out <package>'],
+    ['L0 scout', 'harness scout --repo ... --out <package> -> repo-scout agent -> harness ingest-scout'],
+    ['L1 analyze', 'harness analyze --repo ... --out <package> (requires agent scout output)'],
     ['L2 explore', 'harness explore --package <package>'],
     ['L2 evidence bundle', 'npm run understanding:collect-exploration -- --package <package>'],
     ['L4 project', 'harness project --package <package> --only all'],

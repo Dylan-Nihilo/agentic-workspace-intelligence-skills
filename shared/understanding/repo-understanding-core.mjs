@@ -12,8 +12,12 @@ import { validPredicateSet } from './harness-registry.mjs'
 import {
   REPO_SCAN_POLICY_SCHEMA,
   REPO_SCOUT_PROFILE_SCHEMA,
+  buildRepoScoutContext,
   buildRepoScoutProfile,
   buildScanPolicy,
+  normalizeRepoScoutAgentOutput,
+  renderRepoScoutPrompt,
+  validateRepoScoutAgentOutput,
 } from './repo-scout-profile.mjs'
 
 export const SCHEMA = {
@@ -240,7 +244,187 @@ export function defaultPackageDir(repoPath, outRoot = 'outputs/code-understandin
   return path.resolve(outRoot, safeId(path.basename(path.resolve(repoPath))))
 }
 
-export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, maxBytes = 180000, incremental = null }) {
+export function prepareRepoScoutPackage({ repoPath, outDir, maxFiles = 16000, maxBytes = 180000 }) {
+  const root = path.resolve(repoPath)
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+    throw new Error(`Repository path does not exist: ${root}`)
+  }
+  const packageDir = path.resolve(outDir)
+  const staticDir = path.join(packageDir, 'static')
+  const scoutDir = path.join(packageDir, 'scout')
+  ensureDir(staticDir)
+  ensureDir(scoutDir)
+
+  const generatedAt = new Date().toISOString()
+  const files = walkFiles(root, { maxFiles })
+  const repo = repoMeta(root, generatedAt)
+  const manifests = collectManifests(root, files)
+  const directories = summarizeDirectories(files)
+  const inventoryFiles = files.map(file => ({
+    path: file.relativePath,
+    size: file.size,
+    lines: file.lines,
+    hash: file.hash,
+    hashKind: file.hashKind,
+    language: file.language,
+    category: file.category,
+    binary: file.binary,
+    large: file.large,
+    contentAnalyzable: file.contentAnalyzable,
+    protected: file.protected,
+    protectionReason: file.protectionReason,
+  }))
+  const inventory = {
+    schemaVersion: SCHEMA.inventory,
+    generatedAt,
+    repo,
+    scan: {
+      maxFiles,
+      truncated: files.length >= maxFiles,
+    },
+    directories,
+    manifests: manifests.map(manifestSummary),
+    counts: {
+      files: inventoryFiles.length,
+      languages: countBy(inventoryFiles, 'language'),
+      categories: countBy(inventoryFiles, 'category'),
+    },
+    files: inventoryFiles,
+  }
+  const snippets = readSelectedFiles(root, chooseScoutKeyFiles(files, manifests), maxBytes)
+  const codeMap = buildCodeMap(root, repo, files, manifests, snippets, generatedAt)
+  codeMap.architecture = buildArchitectureView({ repo, inventory, codeMap, generatedAt })
+  const deterministicProfile = buildRepoScoutProfile({ repo, inventory, codeMap, generatedAt })
+  const deterministicScanPolicy = buildScanPolicy(deterministicProfile)
+  const context = buildRepoScoutContext({
+    repo,
+    inventory,
+    codeMap,
+    deterministicProfile,
+    deterministicScanPolicy,
+    snippets,
+    generatedAt,
+  })
+  const contextPath = path.join(scoutDir, 'context.json')
+  const promptPath = path.join(scoutDir, 'request.md')
+  const outputPath = path.join(scoutDir, 'output.json')
+  writeJson(path.join(packageDir, 'inventory.json'), inventory)
+  writeJson(path.join(staticDir, 'inventory.json'), inventory)
+  writeJson(path.join(staticDir, 'code-map.json'), codeMap)
+  writeJson(path.join(scoutDir, 'deterministic-hints.profile.json'), deterministicProfile)
+  writeJson(path.join(scoutDir, 'deterministic-hints.scan-policy.json'), deterministicScanPolicy)
+  writeJson(contextPath, context)
+  fs.writeFileSync(promptPath, `${renderRepoScoutPrompt(context, outputPath)}\n`, 'utf8')
+
+  const sourceFiles = files.filter(file => ['source', 'test', 'script', 'markup', 'config', 'data'].includes(file.category))
+  const index = {
+    schemaVersion: SCHEMA.package,
+    generatedAt,
+    repo,
+    static: {
+      inventory: 'static/inventory.json',
+      codeMap: 'static/code-map.json',
+    },
+    products: {
+      inventory: 'inventory.json',
+      scoutContext: 'scout/context.json',
+      scoutRequest: 'scout/request.md',
+      scoutOutput: 'scout/output.json',
+    },
+    scout: {
+      schemaVersion: 'repo-scout-dispatch/v1',
+      contextPath: 'scout/context.json',
+      promptPath: 'scout/request.md',
+      outputPath: 'scout/output.json',
+      deterministicHints: {
+        profile: 'scout/deterministic-hints.profile.json',
+        scanPolicy: 'scout/deterministic-hints.scan-policy.json',
+      },
+    },
+    counts: {
+      files: files.length,
+      sourceFiles: sourceFiles.length,
+      protectedFiles: files.filter(file => file.protected).length,
+      symbols: codeMap.symbols.length,
+      imports: codeMap.imports.length,
+      relationships: codeMap.relationships.length,
+    },
+  }
+  writeJson(path.join(packageDir, 'index.json'), index)
+  return {
+    schemaVersion: 'repo-scout-dispatch/v1',
+    generatedAt,
+    packageDir,
+    repo,
+    contextPath,
+    promptPath,
+    outputPath,
+    deterministicHintPaths: {
+      profile: path.join(scoutDir, 'deterministic-hints.profile.json'),
+      scanPolicy: path.join(scoutDir, 'deterministic-hints.scan-policy.json'),
+    },
+    counts: index.counts,
+  }
+}
+
+export function ingestRepoScoutOutput({ packageDir, analysisPath, value = null }) {
+  const root = path.resolve(packageDir)
+  const inventory = readJsonIfExists(path.join(root, 'static', 'inventory.json'))
+  const output = normalizeRepoScoutAgentOutput(value || readJson(analysisPath), {
+    repo: inventory?.repo || null,
+    languages: inventory?.counts?.languages || {},
+    generatedAt: new Date().toISOString(),
+  })
+  const issues = validateRepoScoutAgentOutput(output)
+  if (issues.length) {
+    const err = new Error(`Scout output validation failed:\n- ${issues.join('\n- ')}`)
+    err.issues = issues
+    throw err
+  }
+  ensureDir(path.join(root, 'static'))
+  ensureDir(path.join(root, 'scout'))
+  writeJson(path.join(root, 'scout', 'output.json'), output)
+  writeJson(path.join(root, 'repo-profile.json'), output.profile)
+  writeJson(path.join(root, 'static', 'repo-profile.json'), output.profile)
+  writeJson(path.join(root, 'scan-policy.json'), output.scanPolicy)
+  writeJson(path.join(root, 'static', 'scan-policy.json'), output.scanPolicy)
+  const indexPath = path.join(root, 'index.json')
+  if (fs.existsSync(indexPath)) {
+    const index = readJson(indexPath)
+    index.products = {
+      ...(index.products || {}),
+      repoProfile: 'repo-profile.json',
+      scanPolicy: 'scan-policy.json',
+      scoutOutput: 'scout/output.json',
+    }
+    index.static = {
+      ...(index.static || {}),
+      repoProfile: 'static/repo-profile.json',
+      scanPolicy: 'static/scan-policy.json',
+    }
+    index.scout = {
+      ...(index.scout || {}),
+      outputPath: 'scout/output.json',
+      acceptedAt: new Date().toISOString(),
+      producedBy: output.profile.producedBy,
+    }
+    index.updatedAt = new Date().toISOString()
+    writeJson(indexPath, index)
+  }
+  return {
+    schemaVersion: 'repo-scout-ingest-result/v1',
+    merged: true,
+    packageDir: root,
+    profilePath: path.join(root, 'repo-profile.json'),
+    scanPolicyPath: path.join(root, 'scan-policy.json'),
+    repoKind: output.profile.repoKind,
+    primaryLanguage: output.profile.primaryLanguage,
+    confidence: output.profile.confidence,
+    warnings: output.warnings.concat(output.profile.warnings || []),
+  }
+}
+
+export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, maxBytes = 180000, incremental = null, repoProfile = null, scanPolicy = null, allowBaselineScout = false }) {
   const root = path.resolve(repoPath)
   if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
     throw new Error(`Repository path does not exist: ${root}`)
@@ -306,15 +490,27 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
   const codeMap = incrementalActive
     ? mergeIncrementalCodeMap(previousCodeMap, scannedCodeMap, changedPaths, deletedPaths, repo, generatedAt)
     : scannedCodeMap
-  const repoProfile = buildRepoScoutProfile({ repo, inventory, codeMap, generatedAt })
-  const scanPolicy = buildScanPolicy(repoProfile)
+  const existingProfile = repoProfile || readJsonIfExists(path.join(packageDir, 'repo-profile.json')) || readJsonIfExists(path.join(packageDir, 'static', 'repo-profile.json'))
+  const existingPolicy = scanPolicy || readJsonIfExists(path.join(packageDir, 'scan-policy.json')) || readJsonIfExists(path.join(packageDir, 'static', 'scan-policy.json'))
+  const existingProfileIsBaseline = existingProfile?.producedBy?.mode === 'deterministic-baseline'
+  const acceptedExistingProfile = existingProfile && (!existingProfileIsBaseline || allowBaselineScout) ? existingProfile : null
+  const effectiveRepoProfile = acceptedExistingProfile || (allowBaselineScout ? buildRepoScoutProfile({ repo, inventory, codeMap, generatedAt }) : null)
+  const effectiveScanPolicy = existingPolicy || (effectiveRepoProfile ? buildScanPolicy(effectiveRepoProfile) : null)
+  if (!effectiveRepoProfile || !effectiveScanPolicy) {
+    throw new Error([
+      'Missing agent scout profile. Run scout first, assign repo-scout to write scout/output.json, then ingest it.',
+      `  npm run --silent understanding:harness -- scout --repo ${JSON.stringify(root)} --out ${JSON.stringify(packageDir)}`,
+      `  npm run --silent understanding:harness -- ingest-scout --package ${JSON.stringify(packageDir)} --analysis ${JSON.stringify(path.join(packageDir, 'scout', 'output.json'))}`,
+      'Use --allow-baseline-scout only for compatibility tests.',
+    ].join('\n'))
+  }
   codeMap.architecture = buildArchitectureView({ repo, inventory, codeMap, generatedAt })
   const harnessArtifacts = buildHarnessArtifacts({
     repo,
     inventory,
     codeMap,
-    repoProfile,
-    scanPolicy,
+    repoProfile: effectiveRepoProfile,
+    scanPolicy: effectiveScanPolicy,
     snippets,
     generatedAt,
     packageDir,
@@ -324,7 +520,7 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
     incremental: incrementalActive,
   })
   const { factGraph, renderGraph, knowledgeIndex } = harnessArtifacts
-  const request = buildUnderstandingRequest({ repo, inventory, codeMap, repoProfile, scanPolicy, factGraph, renderGraph, knowledgeIndex, snippets })
+  const request = buildUnderstandingRequest({ repo, inventory, codeMap, repoProfile: effectiveRepoProfile, scanPolicy: effectiveScanPolicy, factGraph, renderGraph, knowledgeIndex, snippets })
   const packageIndex = {
     schemaVersion: SCHEMA.package,
     generatedAt,
@@ -378,8 +574,8 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
       symbols: codeMap.symbols.length,
       imports: codeMap.imports.length,
       relationships: codeMap.relationships.length,
-      repoKind: repoProfile.repoKind,
-      primaryLanguage: repoProfile.primaryLanguage,
+      repoKind: effectiveRepoProfile.repoKind,
+      primaryLanguage: effectiveRepoProfile.primaryLanguage,
       factNodes: Object.keys(factGraph.nodes).length,
       factEdges: Object.keys(factGraph.edges).length,
       coverageScore: factGraph.stats.coverageScore,
@@ -399,7 +595,7 @@ export function collectRepoUnderstanding({ repoPath, outDir, maxFiles = 16000, m
   writeJson(path.join(packageDir, 'index.json'), packageIndex)
   fs.writeFileSync(path.join(packageDir, 'README.md'), renderPackageReadme(packageIndex), 'utf8')
 
-  return { packageDir, inventory, codeMap, repoProfile, scanPolicy, factGraph, renderGraph, knowledgeIndex, request, requestHash: hashText(request) }
+  return { packageDir, inventory, codeMap, repoProfile: effectiveRepoProfile, scanPolicy: effectiveScanPolicy, factGraph, renderGraph, knowledgeIndex, request, requestHash: hashText(request) }
 }
 
 export function buildRequestForPackage(packageDir) {
@@ -2248,6 +2444,28 @@ function chooseKeyFiles(files, manifests) {
     .filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score || a.file.relativePath.localeCompare(b.file.relativePath))
     .slice(0, 60)
+    .map(item => item.file)
+}
+
+function chooseScoutKeyFiles(files, manifests) {
+  const manifestPaths = new Set(manifests.map(item => item.path))
+  const scored = files
+    .filter(file => file.contentAnalyzable && !file.protected)
+    .map(file => {
+      let score = 0
+      if (manifestPaths.has(file.relativePath)) score += 120
+      if (/(^|\/)(README|AGENTS|CLAUDE)(\.(md|txt))?$|(^|\/)README$/i.test(file.relativePath)) score += 110
+      if (/(^|\/)(main|index|app|application|bootstrap|server|manage|program|startup)\.(js|jsx|ts|tsx|vue|java|go|py|rb|rs|cs|php|kt|scala)$/i.test(file.relativePath)) score += 90
+      if (/(^|\/)(web\.xml|application\.(ya?ml|properties)|bootstrap\.(ya?ml|properties)|runtimecfg|Dockerfile|docker-compose\.ya?ml|\.gitlab-ci\.yml|Jenkinsfile)$/i.test(file.relativePath)) score += 70
+      if (file.category === 'config') score += 25
+      if (file.category === 'docs') score += 20
+      if (file.category === 'source' && /(^|\/)(src|app|server|api|cmd|internal|web)\//i.test(file.relativePath)) score += 15
+      return { file, score }
+    })
+  return scored
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.file.relativePath.localeCompare(b.file.relativePath))
+    .slice(0, 80)
     .map(item => item.file)
 }
 
