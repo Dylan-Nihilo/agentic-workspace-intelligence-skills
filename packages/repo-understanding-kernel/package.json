@@ -1,0 +1,43 @@
+{
+  "name": "@workspace-intelligence/repo-understanding-kernel",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs test/*.smoke.mjs"
+  },
+  "exports": {
+    "./census": "./src/census/frontend-census.mjs",
+    "./support": "./src/census/frontend-support.mjs",
+    "./investigation-frame": "./src/census/investigation-frame.mjs",
+    "./static-program-graph": "./src/census/static-program-graph.mjs",
+    "./community-planning": "./src/graph/community-planner.mjs",
+    "./semantic-store": "./src/knowledge/semantic-store.mjs",
+    "./node-semantics": "./src/knowledge/node-semantic-catalog.mjs",
+    "./node-semantic-context": "./src/knowledge/node-semantic-context.mjs",
+    "./node-semantic-review": "./src/knowledge/node-semantic-review.mjs",
+    "./journeys": "./src/knowledge/journey-store.mjs",
+    "./journey-closure": "./src/planning/journey-closure.mjs",
+    "./node-semantic-planning": "./src/planning/node-semantic-batch-planner.mjs",
+    "./research-planning": "./src/planning/research-contract-planner.mjs",
+    "./task-outcome": "./src/validation/task-outcome-validator.mjs",
+    "./synthesis-narrative": "./src/validation/synthesis-narrative-validator.mjs",
+    "./product-maps": "./src/projections/product-maps.mjs",
+    "./repository-atlas": "./src/projections/repository-atlas-html.mjs",
+    "./verification": "./src/verification/frontend-package-verifier.mjs",
+    "./human-readable": "./src/projections/human-readable-html.mjs",
+    "./snapshot": "./src/snapshot/repo-snapshot.mjs",
+    "./workflow": "./src/workflow/workflow-store.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@babel/parser": "^8.0.4",
+    "@vue/compiler-dom": "^3.5.39",
+    "@vue/compiler-sfc": "^3.5.39",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  }
+}

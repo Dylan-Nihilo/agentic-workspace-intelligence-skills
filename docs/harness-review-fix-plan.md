@@ -1,5 +1,10 @@
 # Harness 评审问题清单与修复任务书
 
+> 历史 v2 修复记录，已归档。当前 v3 不执行 gap/coverage 驱动探索；
+> parser/import 失败进入 deterministic diagnostics，语义研究只由
+> `InvestigationFrame → ResearchContract` 触发。当前协议见
+> `docs/repo-understanding-harness-design.md`。
+
 > 评审对象:`harnesses/repo-understanding` + `shared/understanding/*.mjs`
 > 评审依据:`docs/repo-understanding-harness-design.md`(设计稿)+ 两次真实运行产物抽查
 > 抽查样本:`/tmp/repo-understanding-final-clean`(自扫本仓库)、`/Users/c0007/Desktop/mp-merchant-access-harness-package`(真实 Vue 仓库 mp-merchant-access,2791 nodes / 3969 edges)

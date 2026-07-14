@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-node-semantic-batch-plan.schema.json",
+  "title": "Deterministic Node Semantic Agent Batch Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "planId",
+    "graphId",
+    "snapshotId",
+    "repoPath",
+    "outputBaseRef",
+    "ordering",
+    "limits",
+    "eligibleExtensions",
+    "eligibleFileCount",
+    "eligibleSourceBytes",
+    "batchCount",
+    "batches"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-node-semantic-batch-plan/v1" },
+    "planId": { "type": "string", "pattern": "^node-semantic-plan:[a-f0-9]{24}$" },
+    "graphId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "repoPath": { "type": "string", "minLength": 1 },
+    "outputBaseRef": { "type": "string", "minLength": 1 },
+    "ordering": {
+      "enum": ["source-path", "community-ordinal-then-source-path"]
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxFiles", "maxSourceBytes"],
+      "properties": {
+        "maxFiles": { "type": "integer", "minimum": 1 },
+        "maxSourceBytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "eligibleExtensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^\\." },
+      "uniqueItems": true
+    },
+    "eligibleFileCount": { "type": "integer", "minimum": 0 },
+    "eligibleSourceBytes": { "type": "integer", "minimum": 0 },
+    "batchCount": { "type": "integer", "minimum": 0 },
+    "batches": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/batch" }
+    }
+  },
+  "$defs": {
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "batchId",
+        "ordinal",
+        "primaryFiles",
+        "allowedFiles",
+        "entityIds",
+        "communityIds",
+        "graphNeighborContext",
+        "sourceFingerprints",
+        "sourceBytes",
+        "outputRef"
+      ],
+      "properties": {
+        "batchId": {
+          "type": "string",
+          "pattern": "^node-semantic-batch:[0-9]{4}:[a-f0-9]{20}$"
+        },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "primaryFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "allowedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "entityIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "communityIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "graphNeighborContext": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/graphNeighbor" }
+        },
+        "sourceFingerprints": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sourceFingerprint" }
+        },
+        "sourceBytes": { "type": "integer", "minimum": 0 },
+        "outputRef": { "type": "string", "minLength": 1 }
+      }
+    },
+    "graphNeighbor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edgeId",
+        "type",
+        "fromEntityId",
+        "toEntityId",
+        "fromFile",
+        "toFile",
+        "fromCommunityId",
+        "toCommunityId",
+        "crossCommunity",
+        "sourcePath",
+        "sourceLine"
+      ],
+      "properties": {
+        "edgeId": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "fromEntityId": { "type": "string", "minLength": 1 },
+        "toEntityId": { "type": "string", "minLength": 1 },
+        "fromFile": { "type": "string", "minLength": 1 },
+        "toFile": { "type": "string", "minLength": 1 },
+        "fromCommunityId": { "type": ["string", "null"] },
+        "toCommunityId": { "type": ["string", "null"] },
+        "crossCommunity": { "type": "boolean" },
+        "sourcePath": { "type": ["string", "null"] },
+        "sourceLine": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "sourceFingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filePath",
+        "sourceBytes",
+        "contentFingerprint",
+        "inventoryContentHash",
+        "staticContentHash",
+        "structureFingerprint",
+        "parseStatus"
+      ],
+      "properties": {
+        "filePath": { "type": "string", "minLength": 1 },
+        "sourceBytes": { "type": "integer", "minimum": 0 },
+        "contentFingerprint": {
+          "type": "string",
+          "pattern": "^content:sha256:[a-f0-9]{64}$"
+        },
+        "inventoryContentHash": { "type": ["string", "null"] },
+        "staticContentHash": { "type": ["string", "null"] },
+        "structureFingerprint": { "type": ["string", "null"] },
+        "parseStatus": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

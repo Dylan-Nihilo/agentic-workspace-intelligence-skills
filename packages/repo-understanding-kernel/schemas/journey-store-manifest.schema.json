@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-journey-store-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "generatedAt",
+    "definitionsPath",
+    "bindingsPath",
+    "closurePath",
+    "entries",
+    "counts",
+    "journeySetHash"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-journey-store-manifest/v1" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "definitionsPath": { "type": "string", "minLength": 1 },
+    "bindingsPath": { "type": "string", "minLength": 1 },
+    "closurePath": { "type": "string", "minLength": 1 },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "journeyId",
+          "criticality",
+          "status",
+          "definitionPath",
+          "bindingPath",
+          "closureReportPath",
+          "definitionHash",
+          "bindingHash",
+          "closureHash"
+        ],
+        "properties": {
+          "journeyId": { "type": "string", "minLength": 1 },
+          "criticality": { "enum": ["low", "medium", "high", "critical"] },
+          "status": { "enum": ["candidate", "open", "closed", "blocked", "invalidated"] },
+          "definitionPath": { "type": "string", "minLength": 1 },
+          "bindingPath": { "type": "string", "minLength": 1 },
+          "closureReportPath": { "type": "string", "minLength": 1 },
+          "definitionHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "bindingHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "closureHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["journeys", "candidate", "open", "closed", "blocked", "invalidated", "critical", "criticalClosed"],
+      "properties": {
+        "journeys": { "type": "integer", "minimum": 0 },
+        "candidate": { "type": "integer", "minimum": 0 },
+        "open": { "type": "integer", "minimum": 0 },
+        "closed": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "invalidated": { "type": "integer", "minimum": 0 },
+        "critical": { "type": "integer", "minimum": 0 },
+        "criticalClosed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "journeySetHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-journey-definition.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "journeyId",
+    "snapshotId",
+    "title",
+    "actor",
+    "goal",
+    "trigger",
+    "entry",
+    "steps",
+    "branches",
+    "visibleFeedback",
+    "successOutcome",
+    "failureOutcomes",
+    "evidenceIds",
+    "claimIds",
+    "criticality",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-journey-definition/v1" },
+    "journeyId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "actor": { "type": "string", "minLength": 1 },
+    "goal": { "type": "string", "minLength": 1 },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "description", "entityId", "evidenceIds", "claimIds"],
+      "properties": {
+        "kind": { "enum": ["route-entry", "user-action", "system-event", "external-event", "unknown"] },
+        "description": { "type": "string", "minLength": 1 },
+        "entityId": { "type": ["string", "null"] },
+        "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routeId", "pageId", "sourcePath", "evidenceIds", "claimIds"],
+      "properties": {
+        "routeId": { "type": ["string", "null"] },
+        "pageId": { "type": ["string", "null"] },
+        "sourcePath": { "type": ["string", "null"] },
+        "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stepId",
+          "order",
+          "title",
+          "description",
+          "branchIds",
+          "blocking",
+          "evidenceIds",
+          "claimIds"
+        ],
+        "properties": {
+          "stepId": { "type": "string", "minLength": 1 },
+          "order": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "branchIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "blocking": { "type": "boolean" },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["branchId", "fromStepId", "condition", "nextStepId", "kind", "evidenceIds", "claimIds"],
+        "properties": {
+          "branchId": { "type": "string", "minLength": 1 },
+          "fromStepId": { "type": "string", "minLength": 1 },
+          "condition": { "type": "string", "minLength": 1 },
+          "nextStepId": { "type": ["string", "null"] },
+          "kind": { "enum": ["success", "failure", "alternate", "retry", "exit"] },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "visibleFeedback": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["feedbackId", "stepId", "kind", "description", "evidenceIds", "claimIds"],
+        "properties": {
+          "feedbackId": { "type": "string", "minLength": 1 },
+          "stepId": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": ["loading", "success", "error", "empty", "validation", "navigation", "notification", "visual", "other"]
+          },
+          "description": { "type": "string", "minLength": 1 },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "successOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcomeId", "stepId", "description", "evidenceIds", "claimIds"],
+      "properties": {
+        "outcomeId": { "type": "string", "minLength": 1 },
+        "stepId": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "failureOutcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["outcomeId", "stepId", "branchId", "description", "evidenceIds", "claimIds"],
+        "properties": {
+          "outcomeId": { "type": "string", "minLength": 1 },
+          "stepId": { "type": "string", "minLength": 1 },
+          "branchId": { "type": ["string", "null"] },
+          "description": { "type": "string", "minLength": 1 },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "criticality": { "enum": ["low", "medium", "high", "critical"] },
+    "status": { "enum": ["candidate", "open", "closed", "blocked", "invalidated"] },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,1005 +1,798 @@
 #!/usr/bin/env node
+
+import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
 import {
-  EFFORT_LEVELS,
-  EXPLORERS,
-  PREDICATES,
-  PROJECTIONS,
-  explorerEffort,
-} from '../../shared/understanding/harness-registry.mjs'
+  buildResearchContracts,
+  qualifyOpenQuestions,
+} from '../../packages/repo-understanding-kernel/src/planning/research-contract-planner.mjs'
+import { staticProgramGraphContentHash } from '../../packages/repo-understanding-kernel/src/census/static-program-graph.mjs'
+import { validateTaskOutcome } from '../../packages/repo-understanding-kernel/src/validation/task-outcome-validator.mjs'
+import {
+  installSemanticContracts,
+  writeAcceptedNodeSemanticFixtureResults,
+  writeSatisfiedWorkResult,
+} from '../helpers/v3-workflow-fixture.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const expectations = readJson(path.join(repoRoot, 'evals', 'fixtures', 'golden', 'contract.expectations.json'))
-const harnessScript = path.join(repoRoot, 'harnesses', 'repo-understanding', 'scripts', 'harness.mjs')
-const harnessConfigPath = path.join(repoRoot, 'harnesses', 'repo-understanding', 'harness.config.json')
-const auditExportScript = path.join(repoRoot, 'skills', 'agentic-coding-audit', 'scripts', 'export-audit-data.mjs')
-const normalizeCodingPoolScript = path.join(repoRoot, 'skills', 'agentic-coding-audit', 'scripts', 'normalize-coding-pool.mjs')
-const datasourcePipelineScript = path.join(repoRoot, 'skills', 'agentic-datasource-orchestrator', 'scripts', 'run-pipeline.mjs')
-const ceBridgeScript = path.join(repoRoot, 'skills', 'agentic-ce-bridge', 'scripts', 'run-ce-analysis.mjs')
-const fixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'mini-repo')
-const javaFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'java-mini-repo')
-const reactFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'react-mini-repo')
-const nodeApiFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'node-api-mini-repo')
-const pythonApiFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'python-api-mini-repo')
-const goServiceFixtureRepo = path.join(repoRoot, 'evals', 'fixtures', 'go-service-mini-repo')
-const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-contract-eval-'))
-const packageDir = path.join(workDir, 'package')
+const harnessScript = path.join(repoRoot, 'packages', 'repo-understanding-cli', 'src', 'cli.mjs')
+const fixtures = path.join(repoRoot, 'evals', 'fixtures')
+const reactFixture = path.join(fixtures, 'react-mini-repo')
+const journeyFixture = path.join(fixtures, 'journey-react-mini-repo')
+const backendFixture = path.join(fixtures, 'node-api-mini-repo')
+const fullstackFixture = path.join(fixtures, 'fullstack-mini-repo')
+const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-v3-contract-eval-'))
+const passedChecks = []
 
 try {
-  assertAgentScoutRequired()
-  prepareScoutAndAnalyze(fixtureRepo, packageDir)
-
-  const dispatchStatus = runHarnessJson(['status', '--package', packageDir])
-  assertEqual(dispatchStatus.schemaVersion, expectations.statusSchemaVersion, 'status schemaVersion')
-  assertIncludes(expectations.nextActions, dispatchStatus.nextAction, 'status nextAction enum')
-  assertEqual(dispatchStatus.nextAction, 'dispatch', 'status nextAction after analyze')
-  assertRegistryContracts(packageDir)
-  assertGenericScoutRouting()
-
-  const dispatch = runHarnessJson(['dispatch', '--package', packageDir, '--max-tasks', '3'])
-  assertEqual(dispatch.schemaVersion, expectations.dispatchSchemaVersion, 'dispatch schemaVersion')
-  assert(dispatch.round >= 1, 'dispatch round should be >= 1')
-  assert(Array.isArray(dispatch.explorers), 'dispatch explorers should be an array')
-  assert(dispatch.manifestPath && fs.existsSync(dispatch.manifestPath), 'dispatch manifestPath should exist')
-  assertDispatchEffortInManifest(dispatch)
-
-  assertExplorerOutputSchema()
-  assertVerificationSchema()
-  assertExternalVerifierTrustBoundary()
-  assertCodingPoolGoldenGate()
-  assertAuditExportGate()
-  assertExternalRunGate()
-  assertCeSharedIngestGate()
-  assertCeParseFailureGate()
-
-  const badAnalysis = path.join(workDir, 'bad-analysis.json')
-  writeJson(badAnalysis, {
-    schemaVersion: expectations.explorationAnalysisSchemaVersion,
-    strategy: 'contract eval invalid predicate',
-    facts: [{
-      subject: 'file:src/main.ts',
-      subjectType: 'file',
-      predicate: 'made-up',
-      object: 'file:src/router.ts',
-      objectType: 'file',
-      source: 'dynamic',
-      confidence: 0.7,
-      explorer: 'contract-eval',
-      evidence: [{
-        file: 'src/main.ts',
-        line: 1,
-        endLine: 1,
-        snippet: "import { createRouter } from './router'",
-        tool: 'contract-eval',
-        rawConfidence: 0.7,
-      }],
-    }],
-    openQuestions: [],
-    observations: [],
-    requestedEvidence: { files: [], searches: [] },
-    gaps: [],
-  })
-  const rejected = runHarnessJson(['ingest', '--package', packageDir, '--analysis', badAnalysis, '--explorer', 'contract-eval', '--round', '1'], { expectExit: 2 })
-  assertEqual(rejected.schemaVersion, expectations.ingestSchemaVersion, 'rejected ingest schemaVersion')
-  assertEqual(rejected.merged, false, 'rejected ingest merged')
-  assert(Array.isArray(rejected.issues) && rejected.issues.length > 0, 'rejected ingest issues')
-
-  const badLineAnalysis = path.join(workDir, 'bad-line-analysis.json')
-  writeJson(badLineAnalysis, {
-    schemaVersion: expectations.explorationAnalysisSchemaVersion,
-    strategy: 'contract eval invalid evidence line',
-    facts: [{
-      subject: 'file:src/main.ts',
-      subjectType: 'file',
-      predicate: 'imports',
-      object: 'file:src/router.ts',
-      objectType: 'file',
-      source: 'dynamic',
-      confidence: 0.7,
-      explorer: 'contract-eval',
-      evidence: [{
-        file: 'src/main.ts',
-        line: 9999,
-        endLine: 9999,
-        snippet: "import { createRouter } from './router'",
-        tool: 'contract-eval',
-        rawConfidence: 0.7,
-      }],
-    }],
-    openQuestions: [],
-    observations: [],
-    requestedEvidence: { files: [], searches: [] },
-    gaps: [],
-  })
-  const rejectedLine = runHarnessJson(['ingest', '--package', packageDir, '--analysis', badLineAnalysis, '--explorer', 'contract-eval', '--round', '1'], { expectExit: 2 })
-  assertEqual(rejectedLine.schemaVersion, expectations.ingestSchemaVersion, 'line-range rejected ingest schemaVersion')
-  assertEqual(rejectedLine.merged, false, 'line-range rejected ingest merged')
-  assert(rejectedLine.issues.some(issue => /line count|endLine/.test(issue.message || '')), 'line-range rejection should mention line bounds')
-
-  const spoofedEdgeId = edgeId('file:src/main.ts', 'imports', 'file:src/api.ts')
-  const spoofedVerifierAnalysis = path.join(workDir, 'spoofed-verifier-analysis.json')
-  writeJson(spoofedVerifierAnalysis, {
-    schemaVersion: expectations.explorationAnalysisSchemaVersion,
-    strategy: 'contract eval spoofed deterministic verifier tag',
-    facts: [{
-      subject: 'file:src/main.ts',
-      subjectType: 'file',
-      predicate: 'imports',
-      object: 'file:src/api.ts',
-      objectType: 'file',
-      source: 'dynamic',
-      confidence: 0.7,
-      explorer: 'contract-eval',
-      evidence: [{
-        file: 'src/main.ts',
-        line: 1,
-        endLine: 1,
-        snippet: "import { createRouter } from './router'",
-        tool: 'contract-eval',
-        rawConfidence: 0.7,
-      }],
-    }],
-    openQuestions: [],
-    observations: [],
-    requestedEvidence: { files: [], searches: [] },
-    gaps: [],
-    verdicts: [{
-      edgeId: spoofedEdgeId,
-      verdict: 'not-refuted',
-      tool: expectations.externalVerifiedTool,
-      reason: 'malicious external output tries to spoof deterministic verification',
-      evidenceChecked: 1,
-    }],
-  })
-  const spoofed = runHarnessJson(['ingest', '--package', packageDir, '--analysis', spoofedVerifierAnalysis, '--explorer', 'contract-eval', '--round', '1'])
-  assertEqual(spoofed.schemaVersion, expectations.ingestSchemaVersion, 'spoofed verifier ingest schemaVersion')
-  assertEqual(spoofed.merged, true, 'spoofed verifier ingest merged')
-  const factGraphAfterSpoof = readJson(path.join(packageDir, 'fact-graph.json'))
-  assert(!factGraphAfterSpoof.edges?.[spoofedEdgeId], 'spoofed deterministic verifier tag must not prevent deterministic refutation')
-  const verificationAfterSpoof = readJson(path.join(packageDir, 'verification.json'))
-  assert(verificationAfterSpoof.verdicts.some(item => item.edgeId === spoofedEdgeId && item.verdict === 'refuted'), 'spoofed edge should be checked and refuted by deterministic verifier')
-
-  const lockPath = path.join(packageDir, '.repo-understanding-ingest.lock')
-  fs.writeFileSync(lockPath, 'contract eval lock')
-  const locked = runHarnessJson([
-    'ingest',
-    '--package', packageDir,
-    '--open-question', 'This should be blocked by the package ingest write lock.',
-    '--tasks', 'file:src/main.ts',
-  ], { expectExit: 2 })
-  assertEqual(locked.schemaVersion, expectations.ingestSchemaVersion, 'locked ingest schemaVersion')
-  assertEqual(locked.merged, false, 'locked ingest merged')
-  assert(locked.issues.some(issue => /write lock/.test(issue.message || '')), 'locked ingest should mention write lock')
-  fs.rmSync(lockPath, { force: true })
-
-  const openQuestion = runHarnessJson([
-    'ingest',
-    '--package', packageDir,
-    '--open-question', 'Contract eval confirms the open-question CLI primitive works.',
-    '--tasks', 'file:src/main.ts',
-  ])
-  assertEqual(openQuestion.schemaVersion, expectations.ingestSchemaVersion, 'open-question ingest schemaVersion')
-  assertEqual(openQuestion.merged, true, 'open-question ingest merged')
-  assertIncludes(expectations.nextActions, openQuestion.nextAction, 'open-question ingest nextAction enum')
-
-  const goodAnalysis = path.join(workDir, 'good-analysis.json')
-  writeJson(goodAnalysis, {
-    schemaVersion: expectations.explorationAnalysisSchemaVersion,
-    strategy: 'contract eval open-question-only analysis',
-    facts: [],
-    openQuestions: [{
-      question: 'Contract eval confirms open-question-only ingest remains accepted.',
-      relatedNodes: ['file:src/main.ts'],
-      raisedBy: 'contract-eval',
-    }],
-    observations: [{
-      title: 'Mini repo entrypoint exists',
-      finding: 'src/main.ts imports router, auth, and api modules in the fixture.',
-      confidence: 'high',
-      tags: ['contract'],
-      evidence: [{
-        path: 'src/main.ts',
-        startLine: 1,
-        endLine: 3,
-        reason: 'Entrypoint imports show fixture structure.',
-      }],
-    }],
-    requestedEvidence: { files: [], searches: [] },
-    gaps: [],
-  })
-  const ingested = runHarnessJson(['ingest', '--package', packageDir, '--analysis', goodAnalysis, '--explorer', 'contract-eval', '--round', '1'])
-  assertEqual(ingested.schemaVersion, expectations.ingestSchemaVersion, 'successful ingest schemaVersion')
-  assertEqual(ingested.merged, true, 'successful ingest merged')
-  assertIncludes(expectations.nextActions, ingested.nextAction, 'successful ingest nextAction enum')
-
-  const guardedByEdgeId = edgeId('file:src/components/GuardedButton.ts', 'guarded-by', 'file:src/auth.ts')
-  const guardedByAnalysis = path.join(workDir, 'guarded-by-analysis.json')
-  writeJson(guardedByAnalysis, {
-    schemaVersion: expectations.explorationAnalysisSchemaVersion,
-    strategy: 'contract eval accepts grounded guarded-by facts',
-    facts: [{
-      subject: 'file:src/components/GuardedButton.ts',
-      subjectType: 'file',
-      predicate: 'guarded-by',
-      object: 'file:src/auth.ts',
-      objectType: 'file',
-      source: 'dynamic',
-      confidence: 0.8,
-      explorer: 'contract-eval',
-      evidence: [{
-        file: 'src/components/GuardedButton.ts',
-        line: 1,
-        endLine: 4,
-        snippet: [
-          "import { canAccessAdmin } from '../auth'",
-          '',
-          'export function GuardedButton(permissionIds: string[]) {',
-          "  return canAccessAdmin(permissionIds) ? 'enabled' : 'disabled'",
-        ].join('\n'),
-        tool: 'contract-eval',
-        rawConfidence: 0.8,
-      }],
-    }],
-    openQuestions: [],
-    observations: [],
-    requestedEvidence: { files: [], searches: [] },
-    gaps: [],
-  })
-  const guardedByIngest = runHarnessJson(['ingest', '--package', packageDir, '--analysis', guardedByAnalysis, '--explorer', 'contract-eval', '--round', '1'])
-  assertEqual(guardedByIngest.schemaVersion, expectations.ingestSchemaVersion, 'guarded-by ingest schemaVersion')
-  assertEqual(guardedByIngest.merged, true, 'guarded-by ingest merged')
-  const factGraphAfterGuardedBy = readJson(path.join(packageDir, 'fact-graph.json'))
-  assert(factGraphAfterGuardedBy.edges?.[guardedByEdgeId], 'grounded guarded-by fact should remain in FactGraph')
-
-  forceNoExecutableTasks(packageDir)
-  const synthesizeStatus = runHarnessJson(['status', '--package', packageDir])
-  assertEqual(synthesizeStatus.schemaVersion, expectations.statusSchemaVersion, 'synthesize status schemaVersion')
-  assertEqual(synthesizeStatus.nextAction, 'synthesize', 'status nextAction without executable tasks and without synthesis')
-
-  const badSynthesis = path.join(workDir, 'bad-repo-understanding-analysis.json')
-  writeJson(badSynthesis, {
-    schemaVersion: 'repo-understanding-analysis/v1',
-    confidence: 'medium',
-    summary: 'Too short.',
-    architecture: { style: '', layers: [], components: [], boundaries: [], connections: [] },
-    modules: [],
-    keyFlows: [],
-    risks: [],
-    openQuestions: [],
-    evidenceRefs: [],
-  })
-  runHarness(['write-subagent', '--package', packageDir, '--analysis', badSynthesis, '--runtime', 'contract-eval', '--role', 'repo-understander'], { expectExit: 1 })
-  assert(!fs.existsSync(path.join(packageDir, 'analyses', 'repo-understanding.json')), 'bad synthesis must not write analyses/repo-understanding.json')
-  const indexAfterBadSynthesis = readJson(path.join(packageDir, 'index.json'))
-  assert(!indexAfterBadSynthesis.analyses?.repoUnderstanding, 'bad synthesis must not update index analyses.repoUnderstanding')
-
-  const analysisFile = path.join(workDir, 'repo-understanding-analysis.json')
-  writeJson(analysisFile, buildValidAnalysis(packageDir))
-  const written = runHarnessJson(['write-subagent', '--package', packageDir, '--analysis', analysisFile, '--runtime', 'contract-eval', '--role', 'repo-understander'])
-  assertEqual(written.schemaVersion, expectations.writeSubagentSchemaVersion, 'write-subagent schemaVersion')
-  assertEqual(written.written, true, 'write-subagent written')
-  assertEqual(written.validation.passed, true, 'write-subagent validation passed')
-
-  const doneStatus = runHarnessJson(['status', '--package', packageDir])
-  assertEqual(doneStatus.schemaVersion, expectations.statusSchemaVersion, 'done status schemaVersion')
-  assertEqual(doneStatus.nextAction, 'done', 'status nextAction with synthesis and no executable tasks')
-  assertProjectionProjectCommand(packageDir)
+  if (process.env.REPO_CONTRACT_EVAL_FORCE_FAILURE === '1') {
+    throw new Error('Forced contract-eval failure for exit-code verification.')
+  }
+  assertBackendFailsClosed()
+  assertFullstackScopesToFrontendSubtree()
+  assertDeterministicGraphProvenance()
+  assertQuestionRoutingAndResearchContracts()
+  assertPartialTaskOutcomeIsRejected()
+  assertPartialTaskOutcomeIsRejectedByCli()
+  assertAnalyzeProducesOnlyV3Artifacts()
+  assertProductMapsJourneyClosureAndFreshness()
 
   console.log(JSON.stringify({
-    ok: true,
-    workDir,
-    packageDir,
-    checked: [
-      expectations.statusSchemaVersion,
-      expectations.dispatchSchemaVersion,
-      expectations.ingestSchemaVersion,
-      expectations.writeSubagentSchemaVersion,
-      expectations.explorationAnalysisSchemaVersion,
-      expectations.adversarialVerificationSchemaVersion,
-      `externalVerifiedTool:${expectations.externalVerifiedTool}`,
-      'scout:agent-required',
-      'scout:deterministic-hint-rejected',
-      'scout:stale-baseline-rejected',
-      'scout:ingest-agent-output',
-      'verifier-spoof:deterministic-tag-sanitized',
-      'coding-pool:golden',
-      'coding-pool:invalid-evidenceRefs',
-      'coding-pool:invalid-producedBy',
-      'validateExplorerAnalysis:line-range',
-      'ingest:write-lock',
-      'ingest:open-question',
-      'ingest:guarded-by',
-      'export-audit-data:freshness',
-      'run-pipeline:confirm-external',
-      'run-ce-analysis:shared-ingest',
-      'run-ce-analysis:parse-failure',
-      'registry:schema-predicate-sync',
-      'registry:protocol-anchors',
-      'registry:readme-projections',
-      'registry:default-mini-repo-golden',
-      'registry:disabled-explorer',
-      'registry:effort-complete',
-      'registry:effort-config-override',
-      'dispatch:effort-in-manifest',
-      'project:html',
-      'nextAction:dispatch',
-      'nextAction:synthesize',
-      'nextAction:done',
-    ],
+    schemaVersion: 'repo-understanding-contract-eval/v3',
+    passed: true,
+    checks: passedChecks,
   }, null, 2))
+  fs.rmSync(workDir, { recursive: true, force: true })
 } catch (error) {
-  console.error(error.stack || error.message)
+  console.error(error.stack || error.message || String(error))
   console.error(`Contract eval workDir: ${workDir}`)
-  process.exit(1)
+  process.exitCode = 1
+}
+
+function assertBackendFailsClosed() {
+  const scoutPackage = path.join(workDir, 'backend-scout')
+  const scout = runHarnessJson(['scout', '--repo', backendFixture, '--out', scoutPackage])
+
+  assert.equal(scout.schemaVersion, 'repo-frontend-scout/v1')
+  assert.equal(scout.nextAction, 'unsupported')
+  assert.equal(scout.supportDecision.supportLevel, 'unsupported')
+  assert.equal(scout.supportDecision.repoKind, 'backend')
+  assert.equal(scout.supportDecision.unsupportedReason, 'backend-repository')
+  assert.deepEqual(scout.staticProgramGraph.nodes, [])
+  assert.deepEqual(scout.staticProgramGraph.edges, [])
+  assert(scout.staticProgramGraph.diagnostics.some(item => item.kind === 'unsupported-repository'))
+
+  const analyzePackage = path.join(workDir, 'backend-analyze')
+  runHarness(['analyze', '--repo', backendFixture, '--out', analyzePackage])
+  assert.equal(fs.existsSync(path.join(analyzePackage, 'planning', 'manifest.json')), false)
+  const backendState = readJson(path.join(analyzePackage, 'state', 'run-state.json'))
+  assert.equal(Object.keys(backendState.workItems || {}).length, 0)
+  assert.equal(listFiles(analyzePackage).some(file => file.startsWith('work/items/') || file.startsWith('work/results/')), false)
+  assert.equal(fs.existsSync(path.join(analyzePackage, 'projections')), false)
+  runHarness(['project', '--package', analyzePackage, '--only', 'maps'], { expectNonZero: true })
+  pass('backend:fail-closed')
+}
+
+function assertFullstackScopesToFrontendSubtree() {
+  const packageDir = path.join(workDir, 'fullstack-scout')
+  const scout = runHarnessJson(['scout', '--repo', fullstackFixture, '--out', packageDir])
+  const decision = scout.supportDecision
+  const graph = scout.staticProgramGraph
+
+  assert.equal(decision.supportLevel, 'frontend-subtree-only')
+  assert.equal(decision.repoKind, 'fullstack')
+  assert.deepEqual(decision.frontendRoots, ['apps/web'])
+  assert(decision.backendRoots.includes('services/api'))
+  assert.deepEqual(graph.roots, ['apps/web'])
+  assert(graph.files.length > 0)
+
+  for (const file of graph.files) {
+    assert(isInsideRepoRoot(file.sourcePath, 'apps/web'), `Static graph parsed a non-frontend file: ${file.sourcePath}`)
+  }
+  for (const item of [...graph.nodes, ...graph.edges]) {
+    const sourcePath = item.source?.sourcePath
+    if (sourcePath) assert(isInsideRepoRoot(sourcePath, 'apps/web'), `Graph provenance escaped frontend subtree: ${sourcePath}`)
+    assert.equal(String(item.nodeId || item.edgeId).includes('services/api'), false)
+  }
+  pass('fullstack:frontend-subtree-only')
+}
+
+function assertDeterministicGraphProvenance() {
+  const first = runHarnessJson([
+    'scout', '--repo', reactFixture, '--out', path.join(workDir, 'react-scout-a'),
+  ]).staticProgramGraph
+  const second = runHarnessJson([
+    'scout', '--repo', reactFixture, '--out', path.join(workDir, 'react-scout-b'),
+  ]).staticProgramGraph
+
+  assert.equal(first.schemaVersion, 'repo-static-program-graph/v1')
+  assert.equal(first.parser.mode, 'compiler')
+  assert(first.files.some(file => ['compiler-ast', 'parser-ast'].includes(file.sourceKind)))
+  assert(first.edges.some(edge => edge.type === 'imports'))
+  assert.equal(staticProgramGraphContentHash(first), staticProgramGraphContentHash(second))
+
+  for (const item of [...first.nodes, ...first.edges]) assertSourceProvenance(item)
+  pass('static-program-graph:deterministic-provenance')
+}
+
+function assertQuestionRoutingAndResearchContracts() {
+  const generatedAt = '2026-07-13T00:00:00.000Z'
+  const frame = {
+    schemaVersion: 'repo-investigation-frame/v1',
+    frameId: 'frame:v3-contract-eval',
+    snapshotId: 'snapshot:v3-contract-eval',
+    applicationRoot: { entityId: 'file:src/AuthProvider.tsx', sourcePath: 'src/AuthProvider.tsx' },
+    browserBootstrap: { entryEntityId: 'bootstrap:src/main.tsx', entryPath: 'src/main.tsx' },
+    pageCandidates: [],
+    routeRoots: [],
+    deterministicDiagnostics: [{
+      diagnosticId: 'diagnostic:existing-parser-failure',
+      kind: 'parser-failure',
+      severity: 'warning',
+      message: 'A parser diagnostic remains deterministic work.',
+      sourcePath: 'src/Broken.tsx',
+      evidenceRefs: ['evidence:file:src/Broken.tsx'],
+    }],
+    unresolvedSemanticAmbiguities: [
+      {
+        type: 'semantic-ambiguity',
+        question: 'Which component owns the authenticated user state?',
+        rationale: 'The owner changes Application and Runtime Flow maps.',
+        relatedEntityIds: ['file:src/AuthProvider.tsx', 'file:src/store.ts'],
+        allowedFiles: ['src/AuthProvider.tsx', 'src/store.ts'],
+        targetMaps: ['application', 'runtime-flow'],
+        targetMapDimensions: ['state-ownership-data-flow', 'auth-permission'],
+        competingHypotheses: [
+          hypothesis('AuthProvider owns authenticated user state.', 'src/AuthProvider.tsx'),
+          hypothesis('The global store owns authenticated user state.', 'src/store.ts'),
+        ],
+      },
+      {
+        type: 'runtime-external-blocked',
+        question: 'Which auth provider is active in the deployed browser session?',
+        rationale: 'This requires a live authenticated runtime trace.',
+        runtimeRequired: true,
+        targetMaps: ['runtime-flow'],
+        targetMapDimensions: ['auth-permission'],
+        relatedEntityIds: ['file:src/AuthProvider.tsx'],
+        competingHypotheses: [
+          hypothesis('The local provider is active.', 'src/AuthProvider.tsx'),
+          hypothesis('An injected provider is active.', 'runtime:provider'),
+        ],
+      },
+      {
+        type: 'product-intent',
+        question: 'What business outcome defines a successful sign-in?',
+        rationale: 'Product intent cannot be invented from source structure.',
+        productIntentRequired: true,
+        targetMaps: ['experience'],
+        targetMapDimensions: ['core-journeys'],
+        relatedEntityIds: ['file:src/Login.tsx'],
+      },
+      {
+        code: 'import-resolution-failure',
+        question: 'Why did an import fail to resolve?',
+        evidenceRefs: ['evidence:file:src/Broken.tsx'],
+      },
+    ],
+  }
+
+  const qualified = qualifyOpenQuestions({
+    investigationFrame: frame,
+    snapshotId: frame.snapshotId,
+    generatedAt,
+  })
+  const contracts = buildResearchContracts({
+    snapshotId: frame.snapshotId,
+    investigationFrame: frame,
+    openQuestions: qualified.openQuestions,
+    generatedAt,
+  })
+
+  const semantic = qualified.openQuestions.filter(item => item.category === 'semantic-ambiguity')
+  const external = qualified.openQuestions.filter(item => ['runtime-external-blocked', 'product-intent'].includes(item.category))
+  assert.equal(semantic.length, 1)
+  assert.equal(external.length, 2)
+  assert(external.every(item => item.lifecycleStatus === 'blocked'))
+  assert.equal(contracts.length, 1)
+  assert.deepEqual(contracts[0].questions.map(item => item.questionId), [semantic[0].questionId])
+  assert(contracts[0].hypotheses.length >= 2)
+  assert.equal(contracts.some(contract => contract.questions.some(question => external.some(item => item.questionId === question.questionId))), false)
+  assert(qualified.deterministicDiagnostics.some(item => item.kind === 'import-resolution-failure'))
+  pass('research-contract:semantic-only')
+  pass('questions:runtime-and-product-intent-not-dispatched')
+}
+
+function assertPartialTaskOutcomeIsRejected() {
+  const { contract, outcome, workResult } = taskOutcomeFixture()
+  outcome.status = 'partially-satisfied'
+  outcome.questionOutcomes[0].status = 'partially-satisfied'
+  outcome.questionOutcomes[0].unmetCriteria = ['Adjudicate the remaining owner hypothesis.']
+  outcome.unmetCriteria = ['Adjudicate the remaining owner hypothesis.']
+  workResult.outcomeStatus = 'partially-satisfied'
+
+  const validation = validateTaskOutcome({ contract, outcome, workResult })
+  assert.equal(validation.acceptance.accepted, false)
+  assert.equal(validation.acceptance.decision, 'reject')
+  assert(validation.issues.some(issue => issue.code === 'COMPLETED_RESULT_DID_NOT_SATISFY_CONTRACT'))
+  assert.equal(validation.events[0].eventType, 'task-outcome-rejected')
+  pass('task-outcome:partial-completion-rejected')
+}
+
+function assertPartialTaskOutcomeIsRejectedByCli() {
+  const packageDir = path.join(workDir, 'partial-outcome-cli')
+  runHarness(['analyze', '--repo', fullstackFixture, '--out', packageDir])
+  installSemanticContracts(packageDir)
+  const dispatch = runHarnessJson(['dispatch', '--package', packageDir])
+  assert.equal(dispatch.workItems.length, 1)
+  const item = readJson(dispatch.workItems[0].workItemPath)
+  const produced = writeSatisfiedWorkResult(packageDir, item)
+
+  produced.outcome.status = 'partially-satisfied'
+  produced.outcome.questionOutcomes[0].status = 'partially-satisfied'
+  produced.outcome.questionOutcomes[0].unmetCriteria = ['Adjudicate the remaining owner hypothesis.']
+  produced.outcome.unmetCriteria = ['Adjudicate the remaining owner hypothesis.']
+  writeJson(item.outputArtifactPath, produced.outcome)
+  produced.workResult.outcomeStatus = 'partially-satisfied'
+  produced.workResult.artifactHashes[0].value = hashFile(item.outputArtifactPath)
+  writeJson(produced.workResultPath, produced.workResult)
+
+  const rejected = runHarnessJson([
+    'ingest', '--package', packageDir, '--work-result', produced.workResultPath,
+  ], { expectExit: 2 })
+  assert.equal(rejected.merged, false)
+  assert.equal(rejected.workStatus, 'rejected')
+  assert(rejected.issues.some(issue => issue.code === 'COMPLETED_RESULT_DID_NOT_SATISFY_CONTRACT'))
+  const state = readJson(path.join(packageDir, 'state', 'run-state.json'))
+  assert.equal(state.workItems[item.itemId].status, 'rejected')
+  assert.equal(fs.readFileSync(path.join(packageDir, 'store', 'claims.jsonl'), 'utf8').trim(), '')
+  pass('task-outcome:partial-completion-rejected-by-cli')
+}
+
+function assertAnalyzeProducesOnlyV3Artifacts() {
+  const packageDir = path.join(workDir, 'react-analyze')
+  runHarness(['analyze', '--repo', reactFixture, '--out', packageDir])
+
+  const plan = readJson(path.join(packageDir, 'planning', 'manifest.json'))
+  const questions = readJson(path.join(packageDir, 'planning', 'open-questions.json'))
+  const state = readJson(path.join(packageDir, 'state', 'run-state.json'))
+  const productIntent = questions.questions.filter(question => question.category === 'product-intent')
+
+  assert.equal(productIntent.length, 0, 'Analyze must not manufacture one product-intent template per Journey candidate.')
+  assert.equal(plan.contractRefs.length, 0)
+  assert.equal(Object.keys(state.workItems || {}).length, 0)
+  runHarness(['dispatch', '--package', packageDir], { expectNonZero: true })
+  assertNoLegacyGapOrCoverageArtifacts(packageDir)
+  pass('analyze:no-template-product-intent-work')
+  pass('artifacts:no-gap-or-coverage-v2')
+}
+
+function assertProductMapsJourneyClosureAndFreshness() {
+  const packageDir = path.join(workDir, 'product-maps')
+  runHarness(['analyze', '--repo', journeyFixture, '--out', packageDir])
+  installAcceptedNodeSemanticFixture(packageDir)
+  const graph = readJson(path.join(packageDir, 'static', 'static-program-graph.json'))
+  const journeyId = readJson(path.join(packageDir, 'store', 'journeys', 'manifest.json')).entries[0]?.journeyId
+  assert(journeyId, 'Journey fixture must expose a deterministic Journey candidate.')
+
+  const openStatus = runHarnessJson(['status', '--package', packageDir])
+  assert.equal(openStatus.nextAction, 'blocked')
+  assert.equal(openStatus.workflow.stopReason, 'journey-closure-incomplete')
+  assert.equal(openStatus.validation.gates.journeys.current, false)
+  const openJourneyVerification = runHarnessJson(['verify', '--package', packageDir], { expectExit: 2 })
+  assert.equal(openJourneyVerification.passed, false)
+  assert(openJourneyVerification.issues.some(issue => issue.code === 'journey-closure-incomplete'))
+  const eventFile = path.join(packageDir, 'store', 'run-events.jsonl')
+  const eventsBeforeRejectedProjection = fs.readFileSync(eventFile, 'utf8')
+  const rejectedProjection = runHarness(['project', '--package', packageDir, '--only', 'maps'], { expectNonZero: true })
+  assert.match(`${rejectedProjection.stdout}${rejectedProjection.stderr}`, /Journey closure is incomplete/i)
+  assert.equal(fs.existsSync(path.join(packageDir, 'projections', 'manifest.json')), false)
+  assert.equal(fs.readFileSync(eventFile, 'utf8'), eventsBeforeRejectedProjection)
+
+  const closed = completeCriticalJourney(graph, journeyId)
+  const definitionsPath = path.join(workDir, 'closed-journey-definitions.json')
+  const bindingsPath = path.join(workDir, 'closed-journey-bindings.json')
+  writeJson(definitionsPath, [closed.definition])
+  writeJson(bindingsPath, [closed.bindingSet])
+  const imported = runHarnessJson(['journeys', '--package', packageDir, '--definitions', definitionsPath, '--bindings', bindingsPath])
+  assert.equal(imported.schemaVersion, 'repo-journey-import-result/v1')
+  assert.deepEqual(imported.resolvedQuestionIds, [])
+  assert.equal(imported.nextAction, 'project')
+  const repeated = runHarnessJson(['journeys', '--package', packageDir, '--definitions', definitionsPath, '--bindings', bindingsPath])
+  assert.deepEqual(repeated.resolvedQuestionIds, [])
+
+  assert.equal(runHarnessJson(['status', '--package', packageDir]).nextAction, 'project')
+  const projected = runHarnessJson(['project', '--package', packageDir, '--only', 'maps'])
+  assert.equal(projected.schemaVersion, 'repo-product-projection-result/v1')
+  assert.equal(projected.maps.verificationPath, path.join(packageDir, 'verification', 'frontend-verification.json'))
+  const manifest = readJson(path.join(packageDir, 'projections', 'manifest.json'))
+  const persistedProjectionVerification = readJson(projected.maps.verificationPath)
+  assert.equal(persistedProjectionVerification.phase, 'projection')
+  assert.equal(persistedProjectionVerification.passed, true)
+  assert.equal(persistedProjectionVerification.gates.journeys.current, true)
+  assert.equal(persistedProjectionVerification.gates.productMaps.current, true)
+  const expectedMaps = {
+    application: ['application-map.json', 'repo-application-map/v1'],
+    experience: ['experience-map.json', 'repo-experience-map/v1'],
+    runtimeFlow: ['runtime-flow-map.json', 'repo-runtime-flow-map/v1'],
+    change: ['change-map.json', 'repo-change-map/v1'],
+  }
+  assert.deepEqual(Object.keys(manifest.projections).sort(), Object.keys(expectedMaps).sort())
+  for (const [key, [fileName, schemaVersion]] of Object.entries(expectedMaps)) {
+    const entry = manifest.projections[key]
+    assert.equal(path.basename(entry.path), fileName)
+    assert.equal(entry.schemaVersion, schemaVersion)
+    assert.match(entry.contentHash, /^[a-f0-9]{64}$/)
+    assert.equal(readJson(path.resolve(packageDir, entry.path)).schemaVersion, schemaVersion)
+  }
+
+  const secondPackageDir = path.join(workDir, 'product-maps-determinism')
+  runHarness(['analyze', '--repo', journeyFixture, '--out', secondPackageDir])
+  installAcceptedNodeSemanticFixture(secondPackageDir)
+  const secondGraph = readJson(path.join(secondPackageDir, 'static', 'static-program-graph.json'))
+  const secondJourneyId = readJson(path.join(secondPackageDir, 'store', 'journeys', 'manifest.json')).entries[0]?.journeyId
+  assert(secondJourneyId, 'Second deterministic package has no Journey candidate.')
+  const secondClosed = completeCriticalJourney(secondGraph, secondJourneyId)
+  const secondDefinitionsPath = path.join(workDir, 'closed-journey-definitions-second.json')
+  const secondBindingsPath = path.join(workDir, 'closed-journey-bindings-second.json')
+  writeJson(secondDefinitionsPath, [secondClosed.definition])
+  writeJson(secondBindingsPath, [secondClosed.bindingSet])
+  runHarnessJson(['journeys', '--package', secondPackageDir, '--definitions', secondDefinitionsPath, '--bindings', secondBindingsPath])
+  runHarnessJson(['project', '--package', secondPackageDir, '--only', 'maps'])
+  const secondManifest = readJson(path.join(secondPackageDir, 'projections', 'manifest.json'))
+  assert.deepEqual(secondManifest.projectionKey, manifest.projectionKey)
+  for (const key of Object.keys(expectedMaps)) {
+    assert.equal(secondManifest.projections[key].contentHash, manifest.projections[key].contentHash, `${key} Product Map changed across identical snapshots.`)
+  }
+
+  const closedVerification = runHarnessJson(['verify', '--package', packageDir])
+  assert.equal(closedVerification.passed, true)
+  assert.equal(closedVerification.gates.journeys.current, true)
+  assert.equal(closedVerification.gates.productMaps.current, true)
+
+  const applicationPath = path.join(packageDir, 'projections', 'application-map.json')
+  const tamperedApplication = readJson(applicationPath)
+  tamperedApplication.application.kind = 'tampered-contract-eval'
+  writeJson(applicationPath, tamperedApplication)
+  const contentHashFailure = runHarnessJson(['verify', '--package', packageDir], { expectExit: 2 })
+  assert(contentHashFailure.issues.some(issue => issue.code === 'product-map-hash-mismatch'))
+
+  runHarnessJson(['project', '--package', packageDir, '--only', 'maps'])
+  const changedDefinition = {
+    ...closed.definition,
+    title: 'Complete checkout with changed authoritative intent',
+    goal: 'Submit an order and observe the changed authoritative outcome.',
+  }
+  writeJson(definitionsPath, [changedDefinition])
+  runHarnessJson(['journeys', '--package', packageDir, '--definitions', definitionsPath, '--bindings', bindingsPath])
+  const staleKeyFailure = runHarnessJson(['verify', '--package', packageDir], { expectExit: 2 })
+  assert(staleKeyFailure.issues.some(issue => issue.code === 'product-map-key-stale'))
+
+  runHarnessJson(['project', '--package', packageDir, '--only', 'maps'])
+  assert.equal(runHarnessJson(['verify', '--package', packageDir]).passed, true)
+  pass('journeys:closure-gates-projection')
+  pass('product-maps:four-current-projections')
+  pass('product-maps:cross-run-deterministic')
+  pass('product-maps:content-and-input-hash-staleness')
+}
+
+function installAcceptedNodeSemanticFixture(packageDir) {
+  const planResult = runHarnessJson(['semantic-plan', '--package', packageDir])
+  const plan = readJson(planResult.planPath)
+  writeAcceptedNodeSemanticFixtureResults(packageDir, plan)
+  const ingest = runHarnessJson(['semantic-ingest', '--package', packageDir])
+  assert.equal(ingest.status, 'complete')
+  assert.equal(ingest.acceptedFiles, plan.eligibleFileCount)
+}
+
+function completeCriticalJourney(graph, journeyId) {
+  const snapshotId = graph.snapshotId
+  const generatedAt = graph.generatedAt
+  const entities = {
+    page: requireGraphNode(graph, 'page'),
+    event: requireGraphNode(graph, 'ui-event'),
+    handler: requireGraphNode(graph, 'handler'),
+    state: requireGraphNode(graph, 'state'),
+    request: requireGraphNode(graph, 'request'),
+    endpoint: requireGraphNode(graph, 'endpoint'),
+    response: requireGraphNode(graph, 'response'),
+    feedback: requireGraphNode(graph, 'feedback-candidate', node => /order created/i.test(node.label)),
+    outcome: requireGraphNode(graph, 'outcome-candidate', node => /checkout complete/i.test(node.label)),
+    failure: requireGraphNode(graph, 'outcome-candidate', node => /checkout failed/i.test(node.label)),
+  }
+  const evidenceIds = journeyEvidence(Object.values(entities))
+  const steps = [
+    step('entry', 1, 'Enter checkout'),
+    step('action', 2, 'Submit checkout'),
+    step('handler', 3, 'Handle checkout'),
+    step('state', 4, 'Record pending state'),
+    { ...step('request', 5, 'Request order creation'), branchIds: ['branch:failure'] },
+    step('response', 6, 'Receive order response'),
+    step('feedback', 7, 'Show order feedback'),
+    step('outcome', 8, 'Complete order'),
+    step('failure', 9, 'Show order failure'),
+  ]
+  const bindings = [
+    binding('page', 'entry', 1, 'page', entities.page),
+    binding('event', 'action', 2, 'event', entities.event),
+    binding('handler', 'handler', 3, 'handler', entities.handler),
+    binding('state', 'state', 4, 'state-transition', entities.state),
+    binding('request', 'request', 5, 'request', entities.request),
+    binding('endpoint', 'request', 5, 'endpoint', entities.endpoint),
+    binding('response', 'response', 6, 'response', entities.response),
+    binding('feedback', 'feedback', 7, 'feedback', entities.feedback),
+    binding('outcome', 'outcome', 8, 'outcome', entities.outcome),
+    binding('failure', 'failure', 9, 'outcome', entities.failure, 'branch:failure'),
+  ]
+  const definition = {
+    schemaVersion: 'repo-journey-definition/v1',
+    journeyId,
+    snapshotId,
+    title: 'Complete checkout',
+    actor: 'authenticated-customer',
+    goal: 'Submit an order and receive visible confirmation.',
+    trigger: {
+      kind: 'user-action',
+      description: 'The customer submits checkout.',
+      entityId: entities.event.nodeId,
+      evidenceIds: entities.event.evidenceRefs,
+      claimIds: [],
+    },
+    entry: {
+      routeId: null,
+      pageId: entities.page.nodeId,
+      sourcePath: entities.page.source.sourcePath,
+      evidenceIds: entities.page.evidenceRefs,
+      claimIds: [],
+    },
+    steps,
+    branches: [{
+      branchId: 'branch:failure',
+      fromStepId: 'step:request',
+      condition: 'The order request fails.',
+      nextStepId: 'step:failure',
+      kind: 'failure',
+      evidenceIds,
+      claimIds: [],
+    }],
+    visibleFeedback: [{
+      feedbackId: 'feedback:order-created',
+      stepId: 'step:feedback',
+      kind: 'success',
+      description: 'Order confirmation is visible.',
+      evidenceIds,
+      claimIds: [],
+    }],
+    successOutcome: {
+      outcomeId: 'outcome:order-created',
+      stepId: 'step:outcome',
+      description: 'The order is created and confirmation is visible.',
+      evidenceIds,
+      claimIds: [],
+    },
+    failureOutcomes: [{
+      outcomeId: 'outcome:order-failed',
+      stepId: 'step:failure',
+      branchId: 'branch:failure',
+      description: 'The order remains uncreated and failure feedback is visible.',
+      evidenceIds,
+      claimIds: [],
+    }],
+    evidenceIds,
+    claimIds: [],
+    criticality: 'critical',
+    status: 'closed',
+    createdAt: generatedAt,
+    updatedAt: generatedAt,
+  }
+  const bindingSet = {
+    schemaVersion: 'repo-journey-binding/v1',
+    bindingSetId: `binding-set:${journeyId.replace(/^journey:/, '')}`,
+    journeyId: definition.journeyId,
+    snapshotId,
+    bindings,
+    relations: [
+      relation('page', 'event', 'next'),
+      relation('event', 'handler', 'handles'),
+      relation('handler', 'state', 'writes'),
+      relation('handler', 'request', 'requests'),
+      relation('request', 'endpoint', 'requests'),
+      relation('endpoint', 'response', 'resolves'),
+      relation('response', 'feedback', 'shows'),
+      relation('feedback', 'outcome', 'produces'),
+      relation('request', 'failure', 'produces', 'branch:failure'),
+    ],
+    status: 'closed',
+    generatedAt,
+  }
+  return { definition, bindingSet }
+}
+
+function step(id, order, title) {
+  return {
+    stepId: `step:${id}`,
+    order,
+    title,
+    description: title,
+    branchIds: [],
+    blocking: true,
+    evidenceIds: ['evidence:file:src/pages/CheckoutPage.tsx'],
+    claimIds: [],
+  }
+}
+
+function binding(id, stepId, order, bindingType, entity, branchId = null) {
+  return {
+    bindingId: `binding:${id}`,
+    stepId: `step:${stepId}`,
+    order,
+    branchId,
+    bindingType,
+    entityId: entity.nodeId,
+    entityType: entity.kind,
+    sourcePath: entity.source.sourcePath,
+    evidenceIds: entity.evidenceRefs,
+    claimIds: [],
+    confidence: 1,
+    status: 'confirmed',
+  }
+}
+
+function relation(from, to, kind, branchId = null) {
+  return {
+    fromBindingId: `binding:${from}`,
+    toBindingId: `binding:${to}`,
+    kind,
+    branchId,
+    evidenceIds: ['evidence:file:src/pages/CheckoutPage.tsx'],
+    claimIds: [],
+  }
+}
+
+function requireGraphNode(graph, kind, predicate = () => true) {
+  const node = graph.nodes.find(candidate => candidate.kind === kind && predicate(candidate))
+  assert(node, `Journey fixture Static Program Graph is missing ${kind}.`)
+  assert(node.evidenceRefs?.length, `Journey fixture ${node.nodeId} has no evidence.`)
+  return node
+}
+
+function journeyEvidence(nodes) {
+  return [...new Set(nodes.flatMap(node => node.evidenceRefs || []))].sort()
+}
+
+function questionResolutionCount(packageDir, questionId) {
+  return fs.readFileSync(path.join(packageDir, 'store', 'run-events.jsonl'), 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(JSON.parse)
+    .filter(event => event.eventType === 'question-resolved' && event.payload.questionId === questionId)
+    .length
+}
+
+function taskOutcomeFixture() {
+  const contract = {
+    schemaVersion: 'repo-research-contract/v1',
+    contractId: 'contract:auth-owner',
+    questions: [{
+      questionId: 'question:auth-owner',
+      blocking: true,
+      completionCriteria: ['Identify the owner and adjudicate both hypotheses.'],
+    }],
+    hypotheses: [
+      contractHypothesis('hypothesis:store', 'The store owns auth state.', 'src/store.ts'),
+      contractHypothesis('hypothesis:provider', 'The provider owns auth state.', 'src/AuthProvider.tsx'),
+    ],
+    scope: {
+      communityIds: ['community:auth'],
+      entryEntities: ['src/AuthProvider.tsx'],
+      allowedFiles: ['src/AuthProvider.tsx', 'src/store.ts'],
+      neighborDepth: 1,
+    },
+    acceptanceCriteria: [{
+      criterionId: 'criterion:auth-owner',
+      questionIds: ['question:auth-owner'],
+      hypothesisIds: ['hypothesis:store', 'hypothesis:provider'],
+      blocking: true,
+      minimumEvidenceCount: 2,
+    }],
+    budgetHints: { maxFiles: 2 },
+  }
+  const outcome = {
+    schemaVersion: 'repo-task-outcome/v1',
+    contractId: contract.contractId,
+    status: 'satisfied',
+    questionOutcomes: [{
+      questionId: 'question:auth-owner',
+      status: 'satisfied',
+      answer: 'AuthProvider owns auth state.',
+      supportEvidenceIds: ['evidence:provider'],
+      counterEvidenceIds: ['evidence:store'],
+      hypothesisIds: ['hypothesis:store', 'hypothesis:provider'],
+      satisfiedCriteria: ['Identify the owner and adjudicate both hypotheses.'],
+      unmetCriteria: [],
+      blockerQuestionIds: [],
+      confidence: 0.95,
+    }],
+    hypotheses: [
+      outcomeHypothesis(contract, 'hypothesis:store', 'The store owns auth state.', 'src/store.ts', 'refuted', [], ['evidence:store']),
+      outcomeHypothesis(contract, 'hypothesis:provider', 'The provider owns auth state.', 'src/AuthProvider.tsx', 'supported', ['evidence:provider'], []),
+    ],
+    newSemanticQuestions: [],
+    deterministicDiagnostics: [],
+    runtimeBlockers: [],
+    productIntentQuestions: [],
+    completionEvidence: ['evidence:provider', 'evidence:store'],
+    unmetCriteria: [],
+    scopeObserved: {
+      communityIds: ['community:auth'],
+      entryEntities: ['src/AuthProvider.tsx'],
+      filesRead: ['src/AuthProvider.tsx', 'src/store.ts'],
+      neighborDepth: 1,
+    },
+  }
+  const workResult = {
+    schemaVersion: 'repo-work-result/v3',
+    contractId: contract.contractId,
+    status: 'completed',
+    outcomeStatus: 'satisfied',
+    readSet: [{ path: 'src/AuthProvider.tsx' }, { path: 'src/store.ts' }],
+    scopeViolations: [],
+  }
+  return { contract, outcome, workResult }
+}
+
+function contractHypothesis(hypothesisId, statement, subject) {
+  return {
+    hypothesisId,
+    questionId: 'question:auth-owner',
+    statement,
+    subject,
+    predicate: 'owns',
+    object: 'auth-state',
+    hypothesisType: 'state-owner',
+  }
+}
+
+function outcomeHypothesis(contract, hypothesisId, statement, subject, status, supportEvidenceIds, counterEvidenceIds) {
+  return {
+    schemaVersion: 'repo-hypothesis/v1',
+    hypothesisId,
+    contractId: contract.contractId,
+    questionId: 'question:auth-owner',
+    statement,
+    subject,
+    predicate: 'owns',
+    object: 'auth-state',
+    hypothesisType: 'state-owner',
+    supportEvidenceIds,
+    counterEvidenceIds,
+    qualifiers: {},
+    confidence: 0.95,
+    status,
+    impact: { mapDimensions: ['auth-permission'], journeyIds: [] },
+    followUpQuestionIds: [],
+  }
+}
+
+function hypothesis(statement, subject) {
+  return {
+    statement,
+    subject,
+    predicate: 'owns',
+    object: 'authenticated-user-state',
+    hypothesisType: 'state-owner',
+    expectedSupportEvidence: [`Direct source evidence in ${subject}.`],
+    expectedCounterEvidence: [`Direct source evidence contradicting ownership in ${subject}.`],
+    initialConfidence: 0.5,
+  }
+}
+
+function assertSourceProvenance(item) {
+  const id = item.nodeId || item.edgeId
+  const source = item.source
+  assert(source && typeof source === 'object', `${id} has no source provenance.`)
+  assert(Object.hasOwn(source, 'range'), `${id} source provenance omits range.`)
+  assert.equal(typeof source.provider, 'string', `${id} source provider is missing.`)
+  assert(source.provider.length > 0, `${id} source provider is empty.`)
+  assert.equal(typeof source.sourceKind, 'string', `${id} sourceKind is missing.`)
+  assert(source.sourceKind.length > 0, `${id} sourceKind is empty.`)
+  assert.match(source.structureFingerprint, /^structure:sha256:[a-f0-9]{64}$/)
+  if (['compiler-ast', 'parser-ast'].includes(source.sourceKind)) assert(source.range, `${id} parser provenance omits its exact source range.`)
+  if (!source.range) return
+  for (const boundary of ['start', 'end']) {
+    const position = source.range[boundary]
+    assert(Number.isInteger(position.offset) && position.offset >= 0, `${id} ${boundary}.offset is invalid.`)
+    assert(Number.isInteger(position.line) && position.line >= 1, `${id} ${boundary}.line is invalid.`)
+    assert(Number.isInteger(position.column) && position.column >= 0, `${id} ${boundary}.column is invalid.`)
+  }
+  assert(source.range.end.offset >= source.range.start.offset, `${id} source range is reversed.`)
+}
+
+function assertNoLegacyGapOrCoverageArtifacts(packageDir) {
+  const files = listFiles(packageDir)
+  const forbiddenPaths = [
+    'gap-queue.json',
+    'store/gaps.jsonl',
+    'store/knowledge-manifest.json',
+    'verification.json',
+    'views/fact-graph.json',
+    'views/render-graph.json',
+    'views/architecture.json',
+    'views/domain.json',
+    'views/flow.json',
+  ]
+  for (const relativePath of forbiddenPaths) {
+    assert.equal(files.includes(relativePath), false, `Legacy artifact must not be generated: ${relativePath}`)
+  }
+  assert.equal(files.some(file => file.startsWith('exploration/')), false, 'Legacy exploration artifacts must not be generated.')
+
+  const forbiddenContent = /repo-gap(?:-queue)?\/v\d|coverage-directed|"coverageScore"|"coverageThreshold"|"coverageEligible"|"gapQueue"|"openGaps"|"gapTasks"/i
+  for (const relativePath of files.filter(file => /\.(?:json|jsonl|md|txt)$/i.test(file))) {
+    const file = path.join(packageDir, relativePath)
+    if (fs.statSync(file).size > 2 * 1024 * 1024) continue
+    const match = fs.readFileSync(file, 'utf8').match(forbiddenContent)
+    assert.equal(Boolean(match), false, `Legacy gap/coverage content remains in ${relativePath}: ${match?.[0] || ''}`)
+  }
 }
 
 function runHarness(args, options = {}) {
   const result = spawnSync(process.execPath, [harnessScript, ...args], {
     cwd: repoRoot,
     encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
+    maxBuffer: 32 * 1024 * 1024,
   })
-  const expected = options.expectExit ?? 0
-  if (result.status !== expected) {
-    throw new Error([
-      `harness ${args.join(' ')} exited ${result.status}, expected ${expected}`,
-      result.stdout,
-      result.stderr,
-    ].filter(Boolean).join('\n'))
+  if (result.error) throw result.error
+  if (options.expectNonZero) {
+    if (result.status === 0) throw commandFailure(args, result, 'a non-zero exit')
+  } else {
+    const expected = options.expectExit ?? 0
+    if (result.status !== expected) throw commandFailure(args, result, `exit ${expected}`)
   }
-  return options.includeStderr ? `${result.stdout}${result.stderr}` : result.stdout
+  return result
 }
 
 function runHarnessJson(args, options = {}) {
-  const stdout = runHarness(args, options)
+  const result = runHarness(args, options)
   try {
-    return JSON.parse(stdout)
-  } catch (error) {
-    throw new Error(`Expected JSON from harness ${args.join(' ')}:\n${stdout}`)
+    return JSON.parse(result.stdout)
+  } catch {
+    throw new Error(`Expected JSON from harness ${args.join(' ')}:\n${result.stdout}\n${result.stderr}`)
   }
 }
 
-function prepareScoutAndAnalyze(repo, out) {
-  const scout = runHarnessJson(['scout', '--repo', repo, '--out', out, '--max-files', '2000'])
-  assertEqual(scout.schemaVersion, 'repo-scout-dispatch/v1', 'scout schemaVersion')
-  assert(fs.existsSync(scout.promptPath), 'scout promptPath should exist')
-  assert(fs.existsSync(scout.contextPath), 'scout contextPath should exist')
-  const scoutOutput = writeContractScoutOutput(out)
-  const ingested = runHarnessJson(['ingest-scout', '--package', out, '--analysis', scoutOutput])
-  assertEqual(ingested.schemaVersion, 'repo-scout-ingest-result/v1', 'ingest-scout schemaVersion')
-  assertEqual(ingested.merged, true, 'ingest-scout merged')
-  runHarness(['analyze', '--repo', repo, '--out', out, '--max-files', '2000'])
+function commandFailure(args, result, expectation) {
+  return new Error([
+    `harness ${args.join(' ')} exited ${result.status}; expected ${expectation}.`,
+    result.stdout,
+    result.stderr,
+  ].filter(Boolean).join('\n'))
 }
 
-function assertAgentScoutRequired() {
-  const missingScoutPackage = path.join(workDir, 'missing-scout-package')
-  const missing = runHarness(['analyze', '--repo', fixtureRepo, '--out', missingScoutPackage, '--max-files', '2000'], { expectExit: 2, includeStderr: true })
-  assert(missing.includes('Missing agent scout profile'), 'analyze without scout should fail with missing scout message')
-
-  const deterministicPackage = path.join(workDir, 'deterministic-scout-package')
-  runHarnessJson(['scout', '--repo', fixtureRepo, '--out', deterministicPackage, '--max-files', '2000'])
-  writeJson(path.join(deterministicPackage, 'repo-profile.json'), readJson(path.join(deterministicPackage, 'scout', 'deterministic-hints.profile.json')))
-  writeJson(path.join(deterministicPackage, 'scan-policy.json'), readJson(path.join(deterministicPackage, 'scout', 'deterministic-hints.scan-policy.json')))
-  const staleBaseline = runHarness(['analyze', '--repo', fixtureRepo, '--out', deterministicPackage, '--max-files', '2000'], { expectExit: 2, includeStderr: true })
-  assert(staleBaseline.includes('Missing agent scout profile'), 'analyze must reject stale deterministic-baseline profile files')
-  const rejected = runHarnessJson([
-    'ingest-scout',
-    '--package', deterministicPackage,
-    '--analysis', path.join(deterministicPackage, 'scout', 'deterministic-hints.profile.json'),
-  ], { expectExit: 2 })
-  assertEqual(rejected.schemaVersion, 'repo-scout-ingest-result/v1', 'deterministic scout rejection schemaVersion')
-  assertEqual(rejected.merged, false, 'deterministic scout rejection merged')
-  assert(rejected.issues.some(issue => /deterministic-baseline/.test(issue.message || '')), 'deterministic scout rejection should mention deterministic-baseline')
-}
-
-function writeContractScoutOutput(packageDir) {
-  const profile = readJson(path.join(packageDir, 'scout', 'deterministic-hints.profile.json'))
-  const scanPolicy = readJson(path.join(packageDir, 'scout', 'deterministic-hints.scan-policy.json'))
-  profile.producedBy = {
-    ...(profile.producedBy || {}),
-    role: 'repo-scout',
-    mode: 'agent-contract-fixture',
-    runtime: 'contract-eval',
-  }
-  scanPolicy.producedBy = {
-    ...(scanPolicy.producedBy || {}),
-    role: 'repo-scout',
-    sourceProfile: profile.schemaVersion,
-    mode: 'agent-contract-fixture',
-    runtime: 'contract-eval',
-  }
-  const output = {
-    schemaVersion: 'repo-scout-agent-output/v1',
-    generatedAt: new Date().toISOString(),
-    strategy: 'contract fixture simulates a repo-scout agent after reading scout/request.md',
-    profile,
-    scanPolicy,
-    warnings: [],
-  }
-  const outputPath = path.join(packageDir, 'scout', 'contract-agent-output.json')
-  writeJson(outputPath, output)
-  return outputPath
-}
-
-function assertExplorerOutputSchema() {
-  const schema = readJson(path.join(repoRoot, 'harnesses', 'repo-understanding', 'schemas', 'explorer-output.schema.json'))
-  assertEqual(schema.properties.schemaVersion.const, expectations.explorationAnalysisSchemaVersion, 'explorer output schemaVersion const')
-  assertArrayEqual(schema.required, expectations.explorerOutputRequired, 'explorer output required fields')
-  const evidenceRequired = schema.properties.facts.items.properties.evidence.items.required
-  assertArrayEqual(evidenceRequired, expectations.explorerEvidenceRequired, 'explorer evidence required fields')
-  const predicateEnum = schema.properties.facts.items.properties.predicate.enum
-  assertArrayEqual(predicateEnum, Object.keys(PREDICATES), 'explorer predicate enum registry sync')
-}
-
-function assertVerificationSchema() {
-  const schema = readJson(path.join(repoRoot, 'harnesses', 'repo-understanding', 'schemas', 'verification.schema.json'))
-  assertEqual(schema.properties.schemaVersion.const, expectations.adversarialVerificationSchemaVersion, 'verification schemaVersion const')
-}
-
-function assertRegistryContracts(packageDir) {
-  assertRegistryConsumerWiring()
-  assertRegistryEffortComplete()
-  assertExplorerProtocolAnchors()
-  assertReadmeProjectionOutputs()
-  assertHarnessConfigExplorerKeys()
-  assertMiniRepoRegistryGolden(packageDir)
-  assertDisabledExplorerBehavior(packageDir)
-  assertUnknownExplorerConfigFails(packageDir)
-  assertEffortConfigOverride(packageDir)
-}
-
-function assertGenericScoutRouting() {
-  const cases = [
-    {
-      name: 'java-service',
-      repo: javaFixtureRepo,
-      repoKind: 'backend',
-      primaryLanguage: 'Java',
-      frameworks: ['maven', 'spring'],
-      enabledScanners: ['java', 'xml', 'backend'],
-      forbiddenExplorers: ['vue-containment', 'component-structure'],
-      reportMustInclude: '后端仓库',
-      reportMustNotInclude: '前端项目',
-    },
-    {
-      name: 'react-app',
-      repo: reactFixtureRepo,
-      repoKind: 'frontend',
-      primaryLanguage: 'React TS',
-      frameworks: ['node', 'react'],
-      enabledScanners: ['javascript', 'typescript', 'react'],
-      forbiddenExplorers: ['vue-containment'],
-      requiredExplorers: ['component-structure'],
-    },
-    {
-      name: 'node-api',
-      repo: nodeApiFixtureRepo,
-      repoKind: 'backend',
-      primaryLanguage: 'TypeScript',
-      frameworks: ['node', 'node-server'],
-      enabledScanners: ['javascript', 'typescript', 'backend'],
-      forbiddenExplorers: ['vue-containment', 'component-structure'],
-    },
-    {
-      name: 'python-api',
-      repo: pythonApiFixtureRepo,
-      repoKind: 'backend',
-      primaryLanguage: 'Python',
-      frameworks: ['python', 'python-web'],
-      enabledScanners: ['python', 'backend'],
-      forbiddenExplorers: ['vue-containment', 'component-structure'],
-    },
-    {
-      name: 'go-service',
-      repo: goServiceFixtureRepo,
-      repoKind: 'backend',
-      primaryLanguage: 'Go',
-      frameworks: ['go', 'go-web'],
-      enabledScanners: ['go', 'backend'],
-      forbiddenExplorers: ['vue-containment', 'component-structure'],
-    },
-  ]
-
-  for (const item of cases) {
-    const out = path.join(workDir, `${item.name}-profile-package`)
-    prepareScoutAndAnalyze(item.repo, out)
-    const profile = readJson(path.join(out, 'repo-profile.json'))
-    const scanPolicy = readJson(path.join(out, 'scan-policy.json'))
-    const gapQueue = readJson(path.join(out, 'gap-queue.json'))
-    assertEqual(profile.schemaVersion, 'repo-scout-profile/v1', `${item.name} profile schemaVersion`)
-    assert(profile.producedBy?.mode !== 'deterministic-baseline', `${item.name} profile must come from agent scout output`)
-    assertEqual(scanPolicy.schemaVersion, 'repo-scan-policy/v1', `${item.name} scan-policy schemaVersion`)
-    assertEqual(profile.repoKind, item.repoKind, `${item.name} repoKind`)
-    assertEqual(scanPolicy.repoKind, item.repoKind, `${item.name} scan policy repoKind`)
-    assertEqual(profile.primaryLanguage, item.primaryLanguage, `${item.name} primaryLanguage`)
-    for (const framework of item.frameworks || []) {
-      assert((profile.frameworks || []).some(entry => entry.name === framework), `${item.name} profile should detect ${framework}`)
-    }
-    for (const scanner of item.enabledScanners || []) {
-      assert(scanPolicy.enabledScanners?.[scanner] === true, `${item.name} should enable ${scanner} scanner`)
-    }
-    for (const explorer of item.forbiddenExplorers || []) {
-      assert(!(gapQueue.tasks || []).some(task => task.explorer === explorer), `${item.name} must not dispatch ${explorer} tasks`)
-    }
-    for (const explorer of item.requiredExplorers || []) {
-      assert((gapQueue.tasks || []).some(task => task.explorer === explorer), `${item.name} should dispatch ${explorer} tasks`)
-    }
-    if (item.reportMustInclude || item.reportMustNotInclude) {
-      runHarness(['report', '--package', out])
-      const report = fs.readFileSync(path.join(out, 'report.md'), 'utf8')
-      if (item.reportMustInclude) assert(report.includes(item.reportMustInclude), `${item.name} report should include ${item.reportMustInclude}`)
-      if (item.reportMustNotInclude) assert(!report.includes(item.reportMustNotInclude), `${item.name} report must not include ${item.reportMustNotInclude}`)
+function listFiles(root) {
+  const output = []
+  const visit = directory => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name)
+      if (entry.isDirectory()) visit(absolute)
+      else if (entry.isFile()) output.push(path.relative(root, absolute).split(path.sep).join('/'))
     }
   }
+  visit(root)
+  return output.sort()
 }
 
-function assertRegistryEffortComplete() {
-  for (const [name, explorer] of Object.entries(EXPLORERS)) {
-    assertIncludes(EFFORT_LEVELS, explorer.effort, `registry effort for ${name}`)
-    assertEqual(explorerEffort(name), explorer.effort, `explorerEffort default for ${name}`)
-  }
-  assertEqual(explorerEffort('missing-explorer'), 'medium', 'explorerEffort fallback')
-}
-
-function assertDispatchEffortInManifest(dispatch) {
-  assert(dispatch.explorers.length > 0, 'dispatch should produce at least one bundle for effort contract')
-  for (const bundle of dispatch.explorers) {
-    assertIncludes(EFFORT_LEVELS, bundle.effort, `dispatch effort for ${bundle.explorer}`)
-    assertEqual(bundle.effort, explorerEffort(bundle.explorer), `dispatch effort registry default for ${bundle.explorer}`)
-    assert(bundle.promptPath && fs.existsSync(bundle.promptPath), `dispatch promptPath exists for ${bundle.explorer}`)
-    const prompt = fs.readFileSync(bundle.promptPath, 'utf8')
-    assert(prompt.includes(`Effort: \`${bundle.effort}\``), `dispatch prompt must include effort for ${bundle.explorer}`)
-  }
-}
-
-function assertRegistryConsumerWiring() {
-  const registry = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'harness-registry.mjs'), 'utf8')
-  assert(!/^import\s/m.test(registry), 'harness-registry must not import other modules')
-  assert(!/\b(fs|readFile|writeFile|fetch|spawn)\b/.test(registry), 'harness-registry must remain side-effect-free data and pure queries')
-
-  const factHarness = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'fact-graph-harness.mjs'), 'utf8')
-  assert(factHarness.includes('pickExplorerForPath'), 'fact-graph-harness explorerForPath must delegate to registry')
-  assert(factHarness.includes('explorerBudget'), 'fact-graph-harness explorerTokenBudget must delegate to registry')
-  assert(!factHarness.includes("const EDGE_PREDICATES = new Set(["), 'fact-graph-harness must not keep a private predicate set')
-  assert(!factHarness.includes("'vue-containment': 12000"), 'fact-graph-harness must not keep a private explorer budget map')
-
-  const explorationCore = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'repo-exploration-core.mjs'), 'utf8')
-  assert(explorationCore.includes('factExplorerNames'), 'repo-exploration-core explorer enum must derive from registry')
-  assert(explorationCore.includes('validPredicateSet'), 'repo-exploration-core predicate validation must derive from registry')
-
-  const readableHtml = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'human-readable-html.mjs'), 'utf8')
-  assert(readableHtml.includes('EXPLORERS') && readableHtml.includes('PREDICATES'), 'human-readable translations must derive from registry')
-
-  const harnessCli = fs.readFileSync(harnessScript, 'utf8')
-  assert(harnessCli.includes('projectionNames'), 'harness project whitelist must derive from registry projections')
-  assert(harnessCli.includes('explorerEnabled'), 'harness executable gap filtering must honor registry enabled state')
-}
-
-function assertExplorerProtocolAnchors() {
-  const markdown = fs.readFileSync(path.join(repoRoot, 'skills', 'repo-explorer', 'references', 'explorer-protocol.md'), 'utf8')
-  for (const [predicate, meta] of Object.entries(PREDICATES)) {
-    const anchor = meta.protocolAnchor || predicate
-    assert(protocolHeadingHasAnchor(markdown, anchor), `explorer protocol missing heading anchor for predicate: ${predicate}`)
-  }
-}
-
-function protocolHeadingHasAnchor(markdown, anchor) {
-  const pattern = new RegExp(`^###\\s+.*\`${escapeRegExp(anchor)}\``, 'm')
-  return pattern.test(markdown)
-}
-
-function assertReadmeProjectionOutputs() {
-  const readme = fs.readFileSync(path.join(repoRoot, 'harnesses', 'repo-understanding', 'README.md'), 'utf8')
-  const outputSection = readme.split('## Output Contract')[1]?.split('\n## ')[0] || ''
-  for (const projection of Object.values(PROJECTIONS)) {
-    assert(outputSection.includes(projection.output), `README Output Contract missing projection output: ${projection.output}`)
-  }
-}
-
-function assertHarnessConfigExplorerKeys() {
-  const config = readJson(harnessConfigPath)
-  const unknown = Object.keys(config.explorers || {}).filter(name => !EXPLORERS[name])
-  assertEqual(unknown.length, 0, `harness.config explorers must be registry keys: ${unknown.join(', ')}`)
-}
-
-function assertMiniRepoRegistryGolden(packageDir) {
-  const goldenDir = path.join(repoRoot, 'evals', 'fixtures', 'golden', 'mini-repo-registry-baseline')
-  for (const file of ['fact-graph.json', 'gap-queue.json', 'render-graph.json', 'knowledge-index.json']) {
-    const actual = normalizeRegistryGolden(readJson(path.join(packageDir, file)))
-    const expected = normalizeRegistryGolden(readJson(path.join(goldenDir, file)))
-    assertJsonEqual(actual, expected, `mini-repo registry baseline ${file}`)
-  }
-}
-
-function assertDisabledExplorerBehavior(packageDir) {
-  const disabledExplorer = 'route-binding'
-  const disabledPackage = copyFixture(packageDir, 'registry-disabled-package')
-  const gapQueue = readJson(path.join(disabledPackage, 'gap-queue.json'))
-  const disabledTasks = (gapQueue.tasks || []).filter(task => task.explorer === disabledExplorer)
-  assert(disabledTasks.length > 0, `${disabledExplorer} fixture tasks should exist before disabled-explorer contract`)
-
-  withTemporaryHarnessConfig(config => {
-    config.explorers = { ...(config.explorers || {}) }
-    config.explorers[disabledExplorer] = { ...(config.explorers[disabledExplorer] || {}), enabled: false }
-    return config
-  }, () => {
-    const status = runHarnessJson(['status', '--package', disabledPackage])
-    assert(status.tasks.openDisabled >= disabledTasks.length, 'disabled explorer tasks should be counted as openDisabled')
-    assert(status.tasks.executableOpen < (gapQueue.openTaskCount || gapQueue.tasks.length), 'disabled explorer tasks should not count as executable')
-
-    const dispatch = runHarnessJson(['dispatch', '--package', disabledPackage, '--max-tasks', '40'])
-    assert(!dispatch.explorers.some(item => item.explorer === disabledExplorer), 'dispatch must skip disabled explorer bundles')
-
-    const onlyDisabled = {
-      ...gapQueue,
-      tasks: disabledTasks.map(task => ({ ...task, status: 'open', dispatch: undefined })),
-    }
-    onlyDisabled.taskCount = onlyDisabled.tasks.length
-    onlyDisabled.openTaskCount = onlyDisabled.tasks.length
-    onlyDisabled.dispatchedTaskCount = 0
-    writeJson(path.join(disabledPackage, 'gap-queue.json'), onlyDisabled)
-
-    const disabledOnlyStatus = runHarnessJson(['status', '--package', disabledPackage])
-    assertEqual(disabledOnlyStatus.tasks.executableOpen, 0, 'only disabled tasks executableOpen')
-    assertEqual(disabledOnlyStatus.tasks.openDisabled, disabledTasks.length, 'only disabled tasks openDisabled')
-    assertEqual(disabledOnlyStatus.nextAction, 'synthesize', 'only disabled tasks should converge to synthesize')
-  })
-
-  const restoredStatus = runHarnessJson(['status', '--package', disabledPackage])
-  assertEqual(restoredStatus.tasks.executableOpen, disabledTasks.length, 'reenabled explorer tasks should become executable again')
-  assertEqual(restoredStatus.nextAction, 'dispatch', 'reenabled explorer tasks should restore dispatch nextAction')
-}
-
-function assertUnknownExplorerConfigFails(packageDir) {
-  withTemporaryHarnessConfig(config => {
-    config.explorers = { ...(config.explorers || {}), 'typo-explorer': { enabled: true, tokenBudget: 1 } }
-    return config
-  }, () => {
-    runHarness(['status', '--package', packageDir], { expectExit: 1 })
-  })
-}
-
-function assertEffortConfigOverride(packageDir) {
-  const effortPackage = copyFixture(packageDir, 'registry-effort-package')
-  const gapQueue = readJson(path.join(effortPackage, 'gap-queue.json'))
-  const taskExplorer = (gapQueue.tasks || [])
-    .map(task => task.explorer)
-    .find(name => EXPLORERS[name] && explorerEffort(name) !== 'high')
-  assert(taskExplorer, 'fixture should have at least one non-high explorer task for effort override contract')
-
-  withTemporaryHarnessConfig(config => {
-    config.explorers = { ...(config.explorers || {}) }
-    config.explorers[taskExplorer] = { ...(config.explorers[taskExplorer] || {}), effort: 'high' }
-    return config
-  }, () => {
-    const dispatch = runHarnessJson(['dispatch', '--package', effortPackage, '--max-tasks', '40', '--explorers', taskExplorer])
-    const bundle = dispatch.explorers.find(item => item.explorer === taskExplorer)
-    assert(bundle, `effort override dispatch should include ${taskExplorer}`)
-    assertEqual(bundle.effort, 'high', `effort override for ${taskExplorer}`)
-  })
-
-  withTemporaryHarnessConfig(config => {
-    config.explorers = { ...(config.explorers || {}) }
-    config.explorers[taskExplorer] = { ...(config.explorers[taskExplorer] || {}), effort: 'ultra' }
-    return config
-  }, () => {
-    runHarness(['status', '--package', effortPackage], { expectExit: 1 })
-  })
-}
-
-function assertProjectionProjectCommand(packageDir) {
-  fs.rmSync(path.join(packageDir, 'human-readable.html'), { force: true })
-  runHarness(['project', '--package', packageDir, '--only', 'html'])
-  assert(fs.existsSync(path.join(packageDir, 'human-readable.html')), 'project --only html should write human-readable.html')
-
-  runHarness(['project', '--package', packageDir, '--only', 'all'])
-  for (const projection of Object.values(PROJECTIONS)) {
-    const output = path.join(packageDir, projection.output)
-    assert(fs.existsSync(output), `project --only all missing projection output: ${projection.output}`)
-  }
-  runHarness(['project', '--package', packageDir, '--only', 'bogus'], { expectExit: 1 })
-}
-
-function withTemporaryHarnessConfig(mutator, fn) {
-  const original = fs.readFileSync(harnessConfigPath, 'utf8')
-  try {
-    const next = mutator(JSON.parse(original))
-    writeJson(harnessConfigPath, next)
-    return fn()
-  } finally {
-    fs.writeFileSync(harnessConfigPath, original, 'utf8')
-  }
-}
-
-function assertExternalVerifierTrustBoundary() {
-  const source = fs.readFileSync(path.join(repoRoot, 'shared', 'understanding', 'fact-graph-harness.mjs'), 'utf8')
-  const expected = `edge.metadata?.verification?.tool === '${expectations.externalVerifiedTool}'`
-  assert(source.includes(expected), `isExternalVerified must trust only ${expectations.externalVerifiedTool}`)
-  assert(!source.includes("edge.metadata?.verification?.tool === 'repo-fact-verifier'"), 'repo-fact-verifier must not disable deterministic G3')
-}
-
-function assertCodingPoolGoldenGate() {
-  const fixtureRoot = path.join(repoRoot, 'evals', 'fixtures', 'coding-pool')
-  const golden = readJson(path.join(repoRoot, 'evals', 'fixtures', 'golden', 'coding-pool.golden.json'))
-  const validPool = copyFixture(path.join(fixtureRoot, 'valid'), 'coding-pool-valid')
-  runNode(normalizeCodingPoolScript, ['--pool', validPool])
-  const normalized = readJson(path.join(validPool, 'facts', 'coding-pool.json'))
-  assertJsonEqual(normalized.agentAnalyses, golden.agentAnalyses, 'coding-pool normalized agentAnalyses golden')
-
-  const invalidEmptyEvidence = copyFixture(path.join(fixtureRoot, 'invalid-empty-evidence'), 'coding-pool-invalid-empty-evidence')
-  runNode(normalizeCodingPoolScript, ['--pool', invalidEmptyEvidence], { expectExit: 2 })
-
-  const invalidProducedBy = copyFixture(path.join(fixtureRoot, 'invalid-produced-by'), 'coding-pool-invalid-produced-by')
-  runNode(normalizeCodingPoolScript, ['--pool', invalidProducedBy], { expectExit: 2 })
-}
-
-function assertAuditExportGate() {
-  const poolDir = path.join(workDir, 'datasource', 'pools', 'coding')
-  fs.mkdirSync(path.join(poolDir, 'facts'), { recursive: true })
-  fs.mkdirSync(path.join(poolDir, 'analyses'), { recursive: true })
-  writeJson(path.join(poolDir, 'facts', 'repositories.json'), [])
-  writeJson(path.join(poolDir, 'facts', 'relationships.json'), [])
-  writeJson(path.join(poolDir, 'facts', 'findings.json'), [])
-  writeJson(path.join(poolDir, 'facts', 'runs.json'), [])
-  const codingPoolPath = path.join(poolDir, 'facts', 'coding-pool.json')
-  writeJson(codingPoolPath, {
-    schemaVersion: 'coding-pool/v1',
-    generatedAt: new Date().toISOString(),
-    workspace: { name: 'contract-eval', root: fixtureRepo },
-    runs: [],
-    repositories: [],
-    relationships: [],
-    findings: [],
-    agentAnalyses: [],
-  })
-  const staleTime = new Date(Date.now() - 10000)
-  fs.utimesSync(codingPoolPath, staleTime, staleTime)
-  writeJson(path.join(poolDir, 'analyses', 'newer.json'), [{
-    id: 'analysis:contract-eval',
-    subject: { type: 'repo', id: 'repo:contract-eval' },
-    producedBy: 'subagent',
-    evidenceRefs: ['evidence:raw:contract'],
-    claim: 'Contract eval analysis',
-    rationale: 'Used to prove audit export freshness gate.',
-    confidence: 'low',
-    createdAt: new Date().toISOString(),
-  }])
-  runNode(auditExportScript, ['--pool', poolDir, '--out', path.join(workDir, 'audit-data.json')], { expectExit: 2 })
-}
-
-function assertExternalRunGate() {
-  runNode(datasourcePipelineScript, [
-    '--workspace', fixtureRepo,
-    '--datasource', path.join(workDir, 'blocked-datasource'),
-    '--run-ce',
-    '--ce-subject', 'repo:contract-eval',
-    '--ce-task', 'architecture-risk',
-  ], { expectExit: 2, env: { ...process.env, AGENTIC_CONFIRM_EXTERNAL: '' } })
-}
-
-function assertCeParseFailureGate() {
-  const fakeCli = path.join(workDir, 'fake-ce-cli.mjs')
-  fs.writeFileSync(fakeCli, `#!/usr/bin/env node
-const args = process.argv.slice(2)
-if (args.includes('--version')) {
-  console.log('fake-ce-cli 1.0.0')
-  process.exit(0)
-}
-const payloadIndex = args.indexOf('-j')
-const payload = payloadIndex >= 0 ? JSON.parse(args[payloadIndex + 1] || '{}') : {}
-if (payload.op === 'start') {
-  console.log(JSON.stringify({ session_id: 'contract-session' }))
-  process.exit(0)
-}
-if (payload.op === 'wait') {
-  console.log('not structured json')
-  process.exit(0)
-}
-console.error('unknown op')
-process.exit(2)
-`)
-  fs.chmodSync(fakeCli, 0o755)
-  const datasource = path.join(workDir, 'ce-parse-failure-datasource')
-  runNode(ceBridgeScript, [
-    '--datasource', datasource,
-    '--pool', 'coding',
-    '--subject', 'repo:contract-eval',
-    '--task', 'parse-failure',
-    '--ce-cli', fakeCli,
-    '--timeout', '1',
-  ], { expectExit: 2 })
-  const poolDir = path.join(datasource, 'pools', 'coding')
-  const analysisDir = path.join(poolDir, 'analyses')
-  assert(!fs.existsSync(analysisDir) || fs.readdirSync(analysisDir).length === 0, 'CE parse failure must not write analyses')
-  const rawRoot = path.join(poolDir, 'raw', 'ce-runs')
-  const failedMarkers = fs.readdirSync(rawRoot)
-    .map(name => path.join(rawRoot, name, 'ce-run-failed.json'))
-    .filter(file => fs.existsSync(file))
-  assert(failedMarkers.length === 1, 'CE parse failure should write ce-run-failed.json')
-}
-
-function assertCeSharedIngestGate() {
-  const source = fs.readFileSync(ceBridgeScript, 'utf8')
-  assert(source.includes('ingestAgentAnalyses'), 'CE bridge should use shared datasource ingest')
-  assert(!source.includes('function normalizeAnalyses'), 'CE bridge must not keep private normalizeAnalyses')
-  assert(!source.includes('function subjectFromId'), 'CE bridge must not keep private subjectFromId')
-
-  const fakeCli = path.join(workDir, 'fake-ce-cli-valid.mjs')
-  fs.writeFileSync(fakeCli, `#!/usr/bin/env node
-const args = process.argv.slice(2)
-if (args.includes('--version')) {
-  console.log('fake-ce-cli 1.0.0')
-  process.exit(0)
-}
-const payloadIndex = args.indexOf('-j')
-const payload = payloadIndex >= 0 ? JSON.parse(args[payloadIndex + 1] || '{}') : {}
-if (payload.op === 'start') {
-  console.log(JSON.stringify({ session_id: 'contract-session' }))
-  process.exit(0)
-}
-if (payload.op === 'wait') {
-  console.log(JSON.stringify([{ claim: 'CE shared ingest contract', rationale: 'Valid CE JSON is written through the shared datasource ingest gate.', confidence: 'medium' }]))
-  process.exit(0)
-}
-console.error('unknown op')
-process.exit(2)
-`)
-  fs.chmodSync(fakeCli, 0o755)
-  const datasource = path.join(workDir, 'ce-shared-ingest-datasource')
-  runNode(ceBridgeScript, [
-    '--datasource', datasource,
-    '--pool', 'coding',
-    '--subject', 'repo:contract-eval',
-    '--task', 'shared-ingest',
-    '--ce-cli', fakeCli,
-    '--timeout', '1',
-  ])
-  const analysisDir = path.join(datasource, 'pools', 'coding', 'analyses')
-  const files = fs.readdirSync(analysisDir).filter(file => file.endsWith('.json'))
-  assertEqual(files.length, 1, 'CE shared ingest analysis file count')
-  const records = readJson(path.join(analysisDir, files[0]))
-  assertEqual(records[0].producedBy, 'subagent', 'CE shared ingest producedBy')
-  assert(Array.isArray(records[0].evidenceRefs) && records[0].evidenceRefs.length > 0, 'CE shared ingest evidenceRefs')
-}
-
-function runNode(script, args, options = {}) {
-  const result = spawnSync(process.execPath, [script, ...args], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-    env: options.env || process.env,
-  })
-  const expected = options.expectExit ?? 0
-  if (result.status !== expected) {
-    throw new Error([
-      `node ${path.relative(repoRoot, script)} ${args.join(' ')} exited ${result.status}, expected ${expected}`,
-      result.stdout,
-      result.stderr,
-    ].filter(Boolean).join('\n'))
-  }
-  return result.stdout
-}
-
-function copyFixture(source, name) {
-  const target = path.join(workDir, name)
-  fs.rmSync(target, { recursive: true, force: true })
-  fs.cpSync(source, target, { recursive: true })
-  return target
-}
-
-function forceNoExecutableTasks(root) {
-  const gapQueuePath = path.join(root, 'gap-queue.json')
-  const gapQueue = readJson(gapQueuePath)
-  gapQueue.tasks = []
-  gapQueue.taskCount = 0
-  gapQueue.openTaskCount = 0
-  gapQueue.dispatchedTaskCount = 0
-  gapQueue.coverageScore = Math.max(gapQueue.coverageThreshold || 0.85, 0.95)
-  writeJson(gapQueuePath, gapQueue)
-
-  const factGraphPath = path.join(root, 'fact-graph.json')
-  const factGraph = readJson(factGraphPath)
-  factGraph.stats = {
-    ...(factGraph.stats || {}),
-    coverageScore: gapQueue.coverageScore,
-  }
-  writeJson(factGraphPath, factGraph)
-}
-
-function buildValidAnalysis(root) {
-  const inventory = readJson(path.join(root, 'static', 'inventory.json'))
-  const knowledgeIndex = readJson(path.join(root, 'static', 'knowledge-index.json'))
-  const evidenceRef = knowledgeIndex.evidenceRefs.find(ref => ref.id)?.id
-  const keyFile = inventory.files.find(file => !file.protected && file.path === 'src/main.ts')
-    || inventory.files.find(file => !file.protected)
-  assert(evidenceRef, 'fixture package should have an evidence ref')
-  assert(keyFile, 'fixture package should have a non-protected key file')
-  return {
-    schemaVersion: 'repo-understanding-analysis/v1',
-    confidence: 'medium',
-    summary: 'This fixture repository is a compact frontend-style codebase used to lock the repo-understanding harness contract. It contains an entrypoint, router, auth guard, API request helper, protected metadata-only configuration, and mock route data so contract checks can exercise package projection without relying on a large real repository.',
-    architecture: {
-      style: 'frontend fixture',
-      layers: [{
-        name: 'Application shell',
-        purpose: 'Entrypoint, router, auth guard, and API helper used by the contract eval.',
-        evidenceRefs: [evidenceRef],
-      }],
-      components: [{
-        name: 'Mini app',
-        type: 'frontend',
-        responsibility: 'Small fixture component set for harness contract checks.',
-        keyFiles: [keyFile.path],
-        evidenceRefs: [evidenceRef],
-      }],
-      boundaries: [],
-      connections: [],
-    },
-    modules: [{
-      name: 'src',
-      responsibility: 'Fixture source files for routing, guard, and request examples.',
-      keyFiles: [keyFile.path],
-      evidenceRefs: [evidenceRef],
-    }],
-    keyFlows: [{
-      name: 'Entrypoint to guarded route',
-      steps: [
-        'src/main.ts creates the router and checks admin access.',
-        'src/router.ts binds the admin route to its page and guard.',
-      ],
-      evidenceRefs: [evidenceRef],
-    }, {
-      name: 'Entrypoint to API helper',
-      steps: [
-        'src/main.ts invokes the invoice API helper.',
-        'src/api.ts delegates the request to the shared request helper.',
-      ],
-      evidenceRefs: [evidenceRef],
-    }],
-    risks: [{
-      title: 'Fixture-only runtime confidence',
-      severity: 'low',
-      rationale: 'The repository is intentionally small and exists for contract checks rather than runtime validation.',
-      evidenceRefs: [evidenceRef],
-    }],
-    openQuestions: [],
-    evidenceRefs: [evidenceRef],
-  }
-}
-
-function normalizeRegistryGolden(value) {
-  if (Array.isArray(value)) return value.map(normalizeRegistryGolden)
-  if (!value || typeof value !== 'object') return value
-  const output = {}
-  for (const key of Object.keys(value).sort()) {
-    if (['generatedAt', 'analyzedAt', 'firstSeen', 'lastConfirmed', 'head', 'repoId'].includes(key)) {
-      output[key] = '<volatile>'
-    } else {
-      output[key] = normalizeRegistryGolden(value[key])
-    }
-  }
-  return output
-}
-
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+function isInsideRepoRoot(file, root) {
+  return file === root || file.startsWith(`${root}/`)
 }
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'))
-}
-
-function edgeId(subject, predicate, object) {
-  return `edge:${hashText(`${subject}|${predicate}|${object}`).slice(0, 16)}`
-}
-
-function hashText(value) {
-  return createHash('sha1').update(String(value)).digest('hex')
 }
 
 function writeJson(file, value) {
@@ -1007,27 +800,10 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
 }
 
-function assert(value, message) {
-  if (!value) throw new Error(message)
+function hashFile(file) {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex')
 }
 
-function assertEqual(actual, expected, label) {
-  if (actual !== expected) throw new Error(`${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
-}
-
-function assertIncludes(values, actual, label) {
-  if (!values.includes(actual)) throw new Error(`${label}: ${JSON.stringify(actual)} not in ${JSON.stringify(values)}`)
-}
-
-function assertArrayEqual(actual, expected, label) {
-  assert(Array.isArray(actual), `${label}: actual is not an array`)
-  if (actual.length !== expected.length || actual.some((item, index) => item !== expected[index])) {
-    throw new Error(`${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
-  }
-}
-
-function assertJsonEqual(actual, expected, label) {
-  const actualText = JSON.stringify(actual)
-  const expectedText = JSON.stringify(expected)
-  if (actualText !== expectedText) throw new Error(`${label}: expected ${expectedText}, got ${actualText}`)
+function pass(check) {
+  passedChecks.push(check)
 }

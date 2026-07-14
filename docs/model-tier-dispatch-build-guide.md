@@ -1,5 +1,9 @@
 # 子代理模型分档派遣 · Codex 构建指南
 
+> 历史 v2 构建指南，已归档：当前 suite 不包含具体 runtime/model 分档
+> integration；host 只解释 WorkItem v3 的声明式质量提示。下文的
+> gap-queue 与 explorer-dispatch 内容不是当前执行契约。
+
 > 设计依据:`docs/model-tier-dispatch-design.md`(先读,尤其 §1.2 不对称原则与 §4 非目标)。
 > 本指南只做 **P1(纯声明层)**;P2(台账)单列在文末,**未获授权前不做**。
 > 核心:注册表声明 effort 需求类别 → manifest 透传 → SKILL.md 用能力条件句指导编排 agent 自行映射。**零 runtime 适配代码。**
@@ -63,7 +67,7 @@ export function explorerEffort(name, config = {}) {
 1. `registry:effort-complete`:每个 EXPLORERS 项的 `effort ∈ EFFORT_LEVELS`。
 2. `dispatch:effort-in-manifest`:mini-repo 上跑 dispatch,manifest 每个 bundle 有合法 `effort`,且与注册表(无覆盖时)一致;bundle `.md` 含 `Effort:` 行。
 3. `registry:effort-config-override`:临时 config 设某 explorer `effort: 'high'` → manifest 反映覆盖;设非法值 `'ultra'` → 启动报错(沿用 assertKnownExplorers 路径)。
-4. **G-M1 验收**:`grep -rniE 'gpt-|claude-|opus|haiku|sonnet|xhigh' shared/understanding/harness-registry.mjs skills/repo-understanding/SKILL.md skills/repo-fact-verifier/SKILL.md skills/repo-synthesizer/SKILL.md harnesses/repo-understanding/scripts/harness.mjs` 为空。
+4. **G-M1 验收**:`grep -rniE 'gpt-|claude-|opus|haiku|sonnet|xhigh' shared/understanding/harness-registry.mjs skills/repo-understanding/SKILL.md skills/repo-fact-verifier/SKILL.md skills/repo-synthesizer/SKILL.md packages/repo-understanding-cli/src/commands.mjs` 为空。
 5. 既有断言全绿,尤其 `registry:default-mini-repo-golden`(G-M2:golden 不重烤)。
 
 **提交**:M1+M2 一个 `feat(dispatch): declare effort tiers in registry and manifest`;M3 一个 `docs(skill): effort-tier orchestration guidance`;M4 并入 M1/M2 提交或单独 `test(contract):`。

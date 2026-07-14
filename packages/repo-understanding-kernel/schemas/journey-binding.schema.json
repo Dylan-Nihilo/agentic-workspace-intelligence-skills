@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-journey-binding.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "bindingSetId",
+    "journeyId",
+    "snapshotId",
+    "bindings",
+    "relations",
+    "status",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-journey-binding/v1" },
+    "bindingSetId": { "type": "string", "minLength": 1 },
+    "journeyId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bindingId",
+          "stepId",
+          "order",
+          "branchId",
+          "bindingType",
+          "entityId",
+          "entityType",
+          "sourcePath",
+          "evidenceIds",
+          "claimIds",
+          "confidence",
+          "status"
+        ],
+        "properties": {
+          "bindingId": { "type": "string", "minLength": 1 },
+          "stepId": { "type": "string", "minLength": 1 },
+          "order": { "type": "integer", "minimum": 1 },
+          "branchId": { "type": ["string", "null"] },
+          "bindingType": {
+            "enum": [
+              "page",
+              "ui-element",
+              "event",
+              "handler",
+              "effect",
+              "state-transition",
+              "request",
+              "endpoint",
+              "response",
+              "feedback",
+              "outcome"
+            ]
+          },
+          "entityId": { "type": "string", "minLength": 1 },
+          "entityType": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": ["string", "null"] },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "status": { "enum": ["confirmed", "candidate", "conflicted", "missing"] }
+        }
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fromBindingId", "toBindingId", "kind", "branchId", "evidenceIds", "claimIds"],
+        "properties": {
+          "fromBindingId": { "type": "string", "minLength": 1 },
+          "toBindingId": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": ["next", "triggers", "handles", "causes", "reads", "writes", "requests", "resolves", "shows", "produces"]
+          },
+          "branchId": { "type": ["string", "null"] },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "status": { "enum": ["open", "closed", "blocked", "invalidated"] },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

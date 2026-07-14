@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-agent-trace.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "traceId",
+    "runId",
+    "itemId",
+    "attempt",
+    "eventType",
+    "occurredAt",
+    "role",
+    "usage"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-agent-trace/v1" },
+    "traceId": { "type": "string", "minLength": 1 },
+    "runId": { "type": "string", "minLength": 1 },
+    "itemId": { "type": "string", "minLength": 1 },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "eventType": { "enum": ["work-issued", "agent-started", "agent-completed", "agent-failed", "result-accepted", "result-rejected"] },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "role": { "type": "string", "minLength": 1 },
+    "runtime": { "type": "string" },
+    "model": { "type": "string" },
+    "effort": { "type": "string" },
+    "sessionId": { "type": "string" },
+    "durationMs": { "type": "integer", "minimum": 0 },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["pending", "reported", "unavailable"] },
+        "inputTokens": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "cachedInputTokens": { "type": "integer", "minimum": 0 },
+        "reasoningTokens": { "type": "integer", "minimum": 0 },
+        "totalTokens": { "type": "integer", "minimum": 0 },
+        "costUsd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "message": { "type": "string" }
+  }
+}

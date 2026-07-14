@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-journey-closure-report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "journeyId",
+    "snapshotId",
+    "criticality",
+    "declaredStatus",
+    "status",
+    "canClose",
+    "criticalGatePassed",
+    "dimensions",
+    "integrityIssues",
+    "metrics",
+    "evaluatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-journey-closure-report/v1" },
+    "journeyId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "criticality": { "enum": ["low", "medium", "high", "critical"] },
+    "declaredStatus": { "enum": ["candidate", "open", "closed", "blocked", "invalidated"] },
+    "status": { "enum": ["candidate", "open", "closed", "blocked", "invalidated"] },
+    "canClose": { "type": "boolean" },
+    "criticalGatePassed": { "type": "boolean" },
+    "dimensions": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dimension",
+          "required",
+          "status",
+          "bindingIds",
+          "stepIds",
+          "evidenceIds",
+          "claimIds",
+          "reasonCodes"
+        ],
+        "properties": {
+          "dimension": {
+            "enum": [
+              "entry",
+              "action",
+              "handler",
+              "state",
+              "request",
+              "response",
+              "feedback",
+              "outcome",
+              "branch-failure"
+            ]
+          },
+          "required": { "type": "boolean" },
+          "status": { "enum": ["closed", "open", "blocked", "not-applicable"] },
+          "bindingIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "stepIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "reasonCodes": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        }
+      }
+    },
+    "integrityIssues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredDimensions", "closedRequiredDimensions", "closureRate", "blockingSteps", "closedBlockingSteps"],
+      "properties": {
+        "requiredDimensions": { "type": "integer", "minimum": 0 },
+        "closedRequiredDimensions": { "type": "integer", "minimum": 0 },
+        "closureRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "blockingSteps": { "type": "integer", "minimum": 0 },
+        "closedBlockingSteps": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evaluatedAt": { "type": "string", "minLength": 1 }
+  }
+}

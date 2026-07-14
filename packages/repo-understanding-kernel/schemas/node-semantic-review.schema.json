@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-node-semantic-review.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "planId", "snapshotId", "batchId", "catalogHash", "status", "entries", "reviewer", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-node-semantic-review/v1" },
+    "planId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "batchId": { "type": "string", "minLength": 1 },
+    "catalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": { "enum": ["accepted", "changes-requested"] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["filePath", "status", "checks", "issues"],
+        "properties": {
+          "filePath": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["accepted", "changes-requested"] },
+          "checks": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["responsibilityEvidence", "semanticKind", "noUnsupportedClaims"],
+            "properties": {
+              "responsibilityEvidence": { "type": "boolean" },
+              "semanticKind": { "type": "boolean" },
+              "noUnsupportedClaims": { "type": "boolean" }
+            }
+          },
+          "issues": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reviewId"],
+      "properties": {
+        "kind": { "const": "agent" },
+        "reviewId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { generateHumanReadableHtml } from '../../../shared/understanding/human-readable-html.mjs'
+import { generateHumanReadableHtml } from '../../../packages/repo-understanding-kernel/src/projections/human-readable-html.mjs'
 
 function main() {
   const args = parseArgs(process.argv.slice(2))

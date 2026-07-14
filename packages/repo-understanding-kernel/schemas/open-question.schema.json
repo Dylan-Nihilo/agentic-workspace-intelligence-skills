@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-open-question.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "questionId",
+    "snapshotId",
+    "category",
+    "question",
+    "rationale",
+    "valueScore",
+    "criticality",
+    "blocking",
+    "targetMaps",
+    "targetMapDimensions",
+    "targetJourneyIds",
+    "relatedEntityIds",
+    "evidenceIds",
+    "competingHypotheses",
+    "communityIds",
+    "allowedFiles",
+    "lifecycleStatus",
+    "sourceContractIds",
+    "resolutionSummary",
+    "resolvedByClaimIds",
+    "raisedAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-open-question/v1" },
+    "questionId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "category": {
+      "enum": ["semantic-ambiguity", "runtime-external-blocked", "product-intent"]
+    },
+    "question": { "type": "string", "minLength": 1 },
+    "rationale": { "type": "string", "minLength": 1 },
+    "valueScore": { "type": "number", "minimum": 0, "maximum": 1 },
+    "criticality": { "enum": ["low", "medium", "high", "critical"] },
+    "blocking": { "type": "boolean" },
+    "targetMaps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["application", "experience", "runtime-flow", "change"] }
+    },
+    "targetMapDimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "application-bootstrap",
+          "route-layout-page",
+          "component-composition",
+          "state-ownership-data-flow",
+          "api-client",
+          "auth-permission",
+          "build-deploy",
+          "testing-quality",
+          "core-journeys"
+        ]
+      }
+    },
+    "targetJourneyIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "relatedEntityIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "competingHypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "statement",
+          "subject",
+          "predicate",
+          "object",
+          "hypothesisType",
+          "expectedSupportEvidence",
+          "expectedCounterEvidence",
+          "qualifiers",
+          "initialConfidence"
+        ],
+        "properties": {
+          "statement": { "type": "string", "minLength": 1 },
+          "subject": { "type": "string", "minLength": 1 },
+          "predicate": { "type": "string", "minLength": 1 },
+          "object": {},
+          "hypothesisType": { "type": "string", "minLength": 1 },
+          "expectedSupportEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "expectedCounterEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "qualifiers": { "type": "object" },
+          "initialConfidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "communityIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "allowedFiles": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "lifecycleStatus": {
+      "enum": ["proposed", "qualified", "planned", "resolved", "blocked", "waived", "invalidated"]
+    },
+    "sourceContractIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "resolutionSummary": { "type": ["string", "null"] },
+    "resolvedByClaimIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "raisedAt": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 }
+  }
+}

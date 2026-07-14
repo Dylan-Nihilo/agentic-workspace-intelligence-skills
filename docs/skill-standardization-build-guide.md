@@ -1,5 +1,7 @@
 # Skill 规范化构建指南（执行者：Codex）
 
+> v1 历史构建指南；其中旧 schema、raw ingest 与 write-subagent 要求已删除。
+
 > 本文是 `docs/skill-standardization-design.md` 的**施工版**：把设计拆成带精确文件路径、精确 before/after、可验证验收的任务。
 > **动手前先读**：`docs/skill-standardization-design.md`（设计与理由）、`docs/harness-skill-plan.md`（pull 模型 + 4 条红线）。
 > 套件共 **8 个 skill**：`repo-understanding` / `repo-explorer` / `repo-fact-verifier` / `repo-synthesizer` / `repo-human-readable` / `agentic-datasource-orchestrator` / `agentic-coding-audit` / `agentic-ce-bridge`。

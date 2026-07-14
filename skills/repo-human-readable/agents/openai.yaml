@@ -1,4 +1,4 @@
 interface:
   display_name: "Repo Human Readable"
-  short_description: "Generate a readable HTML report from repo-understanding artifacts"
-  default_prompt: "Use $repo-human-readable to generate a self-contained HTML readable layer from an existing repo-understanding package."
+  short_description: "Render four frontend Maps and Journeys"
+  default_prompt: "Use $repo-human-readable to render an existing frontend package from its Application, Experience, Runtime Flow, and Change Maps, governed Journeys, and accepted synthesis narrative."

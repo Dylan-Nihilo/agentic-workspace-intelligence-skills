@@ -1,4 +1,4 @@
 interface:
   display_name: "Repo Synthesizer"
-  short_description: "Write human-facing synthesis from repo evidence"
-  default_prompt: "Use $repo-synthesizer to produce repo-understanding.json strictly from a verified harness package."
+  short_description: "Summarize governed frontend Maps and Journeys"
+  default_prompt: "Use $repo-synthesizer only for a synthesize WorkItem from $repo-understanding; write from the four completed Maps and governed Journeys without inspecting source or inventing facts."

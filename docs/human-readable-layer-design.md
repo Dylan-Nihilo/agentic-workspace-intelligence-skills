@@ -1,5 +1,10 @@
 # Human-readable HTML layer
 
+> Archived v2 design. The current HTML projection consumes the v3 Product Maps,
+> governed Journeys, semantic Evidence/Claims, and the accepted synthesis narrative.
+> See `docs/repo-understanding-harness-design.md` and
+> `skills/repo-human-readable/references/visual-contract.md`.
+
 This layer turns an existing `repo-understanding` package into one static HTML page.
 
 ## Goal

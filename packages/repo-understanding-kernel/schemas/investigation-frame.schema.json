@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-investigation-frame.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "frameId",
+    "snapshotId",
+    "supportDecisionRef",
+    "applicationKind",
+    "framework",
+    "bundler",
+    "packageWorkspaceRoots",
+    "browserBootstrap",
+    "applicationRoot",
+    "routeRoots",
+    "layoutCandidates",
+    "pageCandidates",
+    "coreFlowCandidates",
+    "stateSystems",
+    "apiClientCandidates",
+    "authPermissionCandidates",
+    "buildDeploySurfaces",
+    "testQualitySurfaces",
+    "deterministicDiagnostics",
+    "unresolvedSemanticAmbiguities",
+    "requiredMapDimensions",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-investigation-frame/v1" },
+    "frameId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "supportDecisionRef": { "type": "string", "minLength": 1 },
+    "applicationKind": {
+      "enum": [
+        "spa",
+        "ssr",
+        "ssg",
+        "hybrid",
+        "component-library",
+        "micro-frontend",
+        "frontend-subtree",
+        "unknown"
+      ]
+    },
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "confidence", "evidenceRefs"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": ["string", "null"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "bundler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "configPaths", "confidence", "evidenceRefs"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "configPaths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "packageWorkspaceRoots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind", "evidenceRefs"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["workspace", "package", "application"] },
+          "evidenceRefs": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "browserBootstrap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entryPath", "entryEntityId", "bootstrapKind", "evidenceRefs", "confidence"],
+      "properties": {
+        "entryPath": { "type": ["string", "null"] },
+        "entryEntityId": { "type": ["string", "null"] },
+        "bootstrapKind": { "enum": ["client-render", "hydrate", "framework-managed", "unknown"] },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "applicationRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entityId", "sourcePath", "evidenceRefs", "confidence"],
+      "properties": {
+        "entityId": { "type": ["string", "null"] },
+        "sourcePath": { "type": ["string", "null"] },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "routeRoots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entityId", "sourcePath", "routeKind", "evidenceRefs", "confidence"],
+        "properties": {
+          "entityId": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "routeKind": { "enum": ["declarative", "file-system", "generated", "unknown"] },
+          "evidenceRefs": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "layoutCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entityId", "sourcePath", "evidenceRefs", "confidence"],
+        "properties": {
+          "entityId": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "pageCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entityId", "sourcePath", "routeIds", "evidenceRefs", "confidence"],
+        "properties": {
+          "entityId": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "routeIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "coreFlowCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidateId", "title", "entryEntityIds", "reason", "evidenceRefs", "confidence"],
+        "properties": {
+          "candidateId": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "entryEntityIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "reason": { "type": "string", "minLength": 1 },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "stateSystems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "sourcePaths", "evidenceRefs"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["local", "context", "client-global", "server-cache", "framework", "unknown"] },
+          "sourcePaths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "apiClientCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entityId", "sourcePath", "clientKind", "evidenceRefs", "confidence"],
+        "properties": {
+          "entityId": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "clientKind": { "type": "string", "minLength": 1 },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "authPermissionCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entityId", "sourcePath", "candidateKind", "evidenceRefs", "confidence"],
+        "properties": {
+          "entityId": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "candidateKind": { "enum": ["route-guard", "ui-gate", "token-client", "session-state", "unknown"] },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "buildDeploySurfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "sourcePath", "evidenceRefs"],
+        "properties": {
+          "kind": { "enum": ["build", "environment", "proxy", "deploy", "ci", "container", "unknown"] },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "testQualitySurfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "sourcePath", "evidenceRefs"],
+        "properties": {
+          "kind": { "enum": ["unit", "integration", "component", "e2e", "lint", "typecheck", "unknown"] },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "deterministicDiagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["diagnosticId", "kind", "severity", "message", "sourcePath", "evidenceRefs"],
+        "properties": {
+          "diagnosticId": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "message": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": ["string", "null"] },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "unresolvedSemanticAmbiguities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ambiguityId",
+          "question",
+          "rationale",
+          "relatedEntityIds",
+          "competingHypotheses",
+          "targetMapDimensions",
+          "targetJourneyIds",
+          "evidenceRefs",
+          "criticality",
+          "blocking",
+          "expectedInformationGain",
+          "estimatedCost",
+          "communityIds",
+          "allowedFiles"
+        ],
+        "properties": {
+          "ambiguityId": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "relatedEntityIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "competingHypotheses": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "statement",
+                "subject",
+                "predicate",
+                "object",
+                "hypothesisType",
+                "expectedSupportEvidence",
+                "expectedCounterEvidence",
+                "qualifiers",
+                "initialConfidence"
+              ],
+              "properties": {
+                "statement": { "type": "string", "minLength": 1 },
+                "subject": { "type": "string", "minLength": 1 },
+                "predicate": { "type": "string", "minLength": 1 },
+                "object": {},
+                "hypothesisType": { "type": "string", "minLength": 1 },
+                "expectedSupportEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+                "expectedCounterEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+                "qualifiers": { "type": "object" },
+                "initialConfidence": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          },
+          "targetMapDimensions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "application-bootstrap",
+                "route-layout-page",
+                "component-composition",
+                "state-ownership-data-flow",
+                "api-client",
+                "auth-permission",
+                "build-deploy",
+                "testing-quality",
+                "core-journeys"
+              ]
+            }
+          },
+          "targetJourneyIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "criticality": { "enum": ["low", "medium", "high", "critical"] },
+          "blocking": { "type": "boolean" },
+          "expectedInformationGain": { "type": "number", "minimum": 0, "maximum": 1 },
+          "estimatedCost": { "type": "number", "minimum": 0 },
+          "communityIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "allowedFiles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "requiredMapDimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "application-bootstrap",
+          "route-layout-page",
+          "component-composition",
+          "state-ownership-data-flow",
+          "api-client",
+          "auth-permission",
+          "build-deploy",
+          "testing-quality",
+          "core-journeys"
+        ]
+      }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

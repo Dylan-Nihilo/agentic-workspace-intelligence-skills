@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-product-map-common.schema.json",
+  "$defs": {
+    "projectionKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshotId",
+        "staticGraphHash",
+        "acceptedClaimSetHash",
+        "journeySetHash",
+        "investigationFrameHash",
+        "projectionGeneratorVersion"
+      ],
+      "properties": {
+        "snapshotId": { "type": "string", "minLength": 1 },
+        "staticGraphHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "acceptedClaimSetHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "journeySetHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "investigationFrameHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "projectionGeneratorVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entityId", "kind", "label", "sourcePath", "evidenceIds", "claimIds", "confidence", "attributes"],
+      "properties": {
+        "entityId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "sourcePath": { "type": ["string", "null"] },
+        "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "attributes": { "type": "object" }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relationId",
+        "type",
+        "from",
+        "to",
+        "order",
+        "branchId",
+        "evidenceIds",
+        "claimIds",
+        "confidence",
+        "attributes"
+      ],
+      "properties": {
+        "relationId": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "order": { "type": ["integer", "null"], "minimum": 1 },
+        "branchId": { "type": ["string", "null"] },
+        "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "attributes": { "type": "object" }
+      }
+    },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surfaceId", "kind", "sourcePath", "evidenceIds", "claimIds"],
+      "properties": {
+        "surfaceId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "sourcePath": { "type": ["string", "null"] },
+        "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagnosticId", "kind", "severity", "message", "sourcePath", "evidenceIds"],
+      "properties": {
+        "diagnosticId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "message": { "type": "string", "minLength": 1 },
+        "sourcePath": { "type": ["string", "null"] },
+        "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    },
+    "blockedDimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dimension", "reason", "ambiguityIds"],
+      "properties": {
+        "dimension": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "ambiguityIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    }
+  }
+}

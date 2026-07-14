@@ -2,7 +2,7 @@
 name: agentic-datasource-orchestrator
 version: 1.0.0
 lastValidated: 2026-07-07
-description: Coordinate producer skills that progressively fill a MULTI-REPOSITORY workspace datasource, then merge their pools into exports/workspace-datasource.json. Use when you need to run coding/CE producer stages in order, track stage completeness and missing evidence, and assemble the workspace datasource — NOT to build a single-repo fact-graph/wiki (use repo-understanding). Keywords - workspace datasource, pool 合并, 多仓协调, stage 完整度, exports/workspace-datasource.json.
+description: Coordinate producer skills that progressively fill a MULTI-REPOSITORY workspace datasource, then merge their pools into exports/workspace-datasource.json. Use when you need to run coding/CE producer stages in order, track stage completeness and missing evidence, and assemble the workspace datasource — NOT to build a single-repository understanding package and Product Maps (use repo-understanding). Keywords - workspace datasource, pool 合并, 多仓协调, stage 完整度, exports/workspace-datasource.json.
 ---
 
 # Agentic Datasource Orchestrator
@@ -18,7 +18,7 @@ description: Coordinate producer skills that progressively fill a MULTI-REPOSITO
 1. 最终 datasource 是 assembled,不是直接手改。producer 只写自己的 pool,orchestrator 更新状态并构建 export。
 2. 每个 producer stage 的缺失证据要显式记录,不要把 incomplete 当 failure 或 success。
 3. 不要把未验证的 producer 输出描述成已通过 datasource 总闸门;以各 producer gate 为准,coding 走 normalize/export gate,CE 走 shared ingest gate。
-4. repo 单仓 fact-graph/wiki 工作应交给 `repo-understanding`,不要用 workspace datasource 代替。
+4. repo 单仓理解包与 Product Maps 应交给 `repo-understanding`,不要用 workspace datasource 代替。
 5. 阶段契约见 `references/pipeline-contract.md`。
 
 ## 流程

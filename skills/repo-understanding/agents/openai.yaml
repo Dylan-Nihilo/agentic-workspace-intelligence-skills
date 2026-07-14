@@ -1,4 +1,4 @@
 interface:
   display_name: "Repo Understanding"
-  short_description: "Orchestrate evidence-backed repo understanding packages"
-  default_prompt: "Use $repo-understanding to analyze a repository into a verified fact graph, wiki, and report."
+  short_description: "Build governed frontend Maps and Journeys"
+  default_prompt: "Use $repo-understanding as the sole orchestrator to analyze a supported frontend repository into Application, Experience, Runtime Flow, and Change Maps with closed Journeys."

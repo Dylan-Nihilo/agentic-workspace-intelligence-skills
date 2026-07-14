@@ -1,5 +1,7 @@
 # 子代理模型分档派遣 · 调研与设计
 
+> 已被 runtime-neutral `qualityClass` / `criticality` / `budgetHints` 取代。当前 suite 不选择具体模型，也不提供 runtime adapter。
+
 > 问题:skill 族大量派遣 sub agent 时,子代理模型继承主线程(Codex 主线程 GPT-5.5 → 子代理全是 GPT-5.5)。机械型任务用高推理模型是 token 与时间的双重浪费。目标:让 agent runtime 在派遣时为不同任务选择合适档位的子代理——同时不破坏 runtime 中立(G-B)与确定性编排(ADK 原则)。
 
 ---

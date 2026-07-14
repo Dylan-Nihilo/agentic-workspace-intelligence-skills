@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-task-outcome.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "status",
+    "questionOutcomes",
+    "hypotheses",
+    "newSemanticQuestions",
+    "deterministicDiagnostics",
+    "runtimeBlockers",
+    "productIntentQuestions",
+    "completionEvidence",
+    "unmetCriteria",
+    "scopeObserved",
+    "cost"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-task-outcome/v1" },
+    "contractId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["satisfied", "partially-satisfied", "blocked", "failed"] },
+    "questionOutcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "status",
+          "answer",
+          "supportEvidenceIds",
+          "counterEvidenceIds",
+          "hypothesisIds",
+          "satisfiedCriteria",
+          "unmetCriteria",
+          "blockerQuestionIds",
+          "confidence"
+        ],
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["satisfied", "partially-satisfied", "blocked", "failed"] },
+          "answer": { "type": ["string", "null"] },
+          "supportEvidenceIds": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "counterEvidenceIds": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "hypothesisIds": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "satisfiedCriteria": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "unmetCriteria": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "blockerQuestionIds": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "hypothesisId",
+          "contractId",
+          "questionId",
+          "statement",
+          "subject",
+          "predicate",
+          "object",
+          "hypothesisType",
+          "supportEvidenceIds",
+          "counterEvidenceIds",
+          "qualifiers",
+          "confidence",
+          "status",
+          "impact",
+          "followUpQuestionIds"
+        ],
+        "properties": {
+          "schemaVersion": { "const": "repo-hypothesis/v1" },
+          "hypothesisId": { "type": "string", "minLength": 1 },
+          "contractId": { "type": "string", "minLength": 1 },
+          "questionId": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "subject": { "type": "string", "minLength": 1 },
+          "predicate": { "type": "string", "minLength": 1 },
+          "object": {},
+          "hypothesisType": { "type": "string", "minLength": 1 },
+          "supportEvidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "counterEvidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "qualifiers": { "type": "object" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "status": { "enum": ["proposed", "supported", "refuted", "inconclusive"] },
+          "impact": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mapDimensions", "journeyIds"],
+            "properties": {
+              "mapDimensions": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "application-bootstrap",
+                    "route-layout-page",
+                    "component-composition",
+                    "state-ownership-data-flow",
+                    "api-client",
+                    "auth-permission",
+                    "build-deploy",
+                    "testing-quality",
+                    "core-journeys"
+                  ]
+                }
+              },
+              "journeyIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            }
+          },
+          "followUpQuestionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "newSemanticQuestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "snapshotId",
+          "question",
+          "rationale",
+          "valueScore",
+          "criticality",
+          "blocking",
+          "targetMaps",
+          "targetJourneyIds",
+          "relatedEntityIds",
+          "evidenceIds"
+        ],
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1 },
+          "snapshotId": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "valueScore": { "type": "number", "minimum": 0, "maximum": 1 },
+          "criticality": { "enum": ["low", "medium", "high", "critical"] },
+          "blocking": { "type": "boolean" },
+          "targetMaps": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "enum": ["application", "experience", "runtime-flow", "change"] }
+          },
+          "targetJourneyIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "relatedEntityIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "deterministicDiagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["diagnosticId", "kind", "severity", "message", "sourcePath", "evidenceRefs"],
+        "properties": {
+          "diagnosticId": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "message": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": ["string", "null"] },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "runtimeBlockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "question",
+          "rationale",
+          "requiredExternalInput",
+          "valueScore",
+          "criticality",
+          "blocking",
+          "targetMaps",
+          "targetJourneyIds",
+          "relatedEntityIds",
+          "evidenceIds"
+        ],
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "requiredExternalInput": { "type": "string", "minLength": 1 },
+          "valueScore": { "type": "number", "minimum": 0, "maximum": 1 },
+          "criticality": { "enum": ["low", "medium", "high", "critical"] },
+          "blocking": { "type": "boolean" },
+          "targetMaps": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "enum": ["application", "experience", "runtime-flow", "change"] }
+          },
+          "targetJourneyIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "relatedEntityIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "productIntentQuestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "question",
+          "rationale",
+          "valueScore",
+          "criticality",
+          "blocking",
+          "targetMaps",
+          "targetJourneyIds",
+          "relatedEntityIds",
+          "evidenceIds"
+        ],
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "valueScore": { "type": "number", "minimum": 0, "maximum": 1 },
+          "criticality": { "enum": ["low", "medium", "high", "critical"] },
+          "blocking": { "type": "boolean" },
+          "targetMaps": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "enum": ["application", "experience", "runtime-flow", "change"] }
+          },
+          "targetJourneyIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "relatedEntityIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "completionEvidence": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "unmetCriteria": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "scopeObserved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["communityIds", "entryEntities", "filesRead", "neighborDepth"],
+      "properties": {
+        "communityIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "entryEntities": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "filesRead": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "neighborDepth": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["usageStatus"],
+      "properties": {
+        "usageStatus": { "enum": ["reported", "unavailable"] },
+        "inputTokens": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "totalTokens": { "type": "integer", "minimum": 0 },
+        "costUsd": { "type": "number", "minimum": 0 },
+        "durationMs": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

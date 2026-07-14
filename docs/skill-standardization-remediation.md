@@ -1,5 +1,7 @@
 # Skill 规范化 · 返修工单（执行者：Codex）
 
+> v1 历史返修记录；不代表当前 Skill-first v2 执行面。
+
 > 背景：Codex 已完成 Wave 0 + Wave 1(evals) + 部分 Wave 2/3。经对抗式评审，主体可接受，但有 4 个 P1 + 2 个 P2 必须返修，另有诚实性/中立性与 P3 项。
 > 权威文档：`docs/skill-standardization-build-guide.md`（§0 护栏 G-A..G-E、Wave0-T3 HARD-GATE 真值表）。**护栏不变**：不删现有 gate、不动 `producedBy` 枚举、skill 脚本只薄封装、`[HARD-GATE:X]` 的 X 必须是能 grep 到 throw/exit 的**符号**。
 > 已确认无需再动：`normalize-coding-pool.mjs:84` 的 `exit(2)`、`producedBy` 枚举、8 条 description 文本、`eval:contract` 绿。

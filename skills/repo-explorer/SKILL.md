@@ -1,49 +1,44 @@
 ---
 name: repo-explorer
-version: 1.0.0
-harnessContract:
-  dispatch: repo-explorer-dispatch/v1
-  ingestResult: repo-harness-ingest-result/v1
-  output: repo-exploration-analysis/v1
-lastValidated: 2026-07-07
-description: Produce new evidence-backed fact triples by read-only, targeted exploration of one dispatch bundle. Use for an L2 exploration task in the repo-understanding harness; produces facts (not verifies them — for refutation use repo-fact-verifier). Invoked by the repo-understanding orchestrator. Keywords - explorer bundle, gap task, 定向探索, fact 三元组, evidence, read-only.
+description: >-
+  Execute either one semantic-research ResearchContract or one bounded Stage 6 node-semantic enrichment batch inside a supported frontend scope. Use when repo-understanding dispatches repo-explorer to return evidence-backed Hypotheses/TaskOutcome or repo-node-semantic-catalog/v1 entries. Never handle deterministic diagnostics or mutate package state; node enrichment never synthesizes Journeys/business paths or API parameter tables.
 ---
 
-# Repo Explorer(L2 探索 worker)
+# Repo Explorer
 
-输入是一个 dispatch bundle 路径(`<package>/exploration/dispatch/round-<n>/<explorer>.md`);产出是可合并进 fact-graph 的 `repo-exploration-analysis/v1` JSON。谓词判定标准与反例见 `references/explorer-protocol.md`,动笔前先读。
+执行两种互斥模式之一：`semantic-research` 或 Stage 6 `node-semantic-enrichment`。执行前完整读取 `references/explorer-protocol.md`，拒绝混合模式或未类型化任务。
 
-## 红线(HARD-GATE)
+## 模式路由
 
-1. [HARD-GATE: validateExplorerAnalysis] `predicate`、`source`、`confidence`、必填字段、非空 evidence、snippet 长度、inventory 文件存在性和 evidence 行号范围由 ingest 强制校验。
+- **Semantic research**：只接受 `role=repo-explorer`、`kind=semantic-research`、`repo-work-item/v3` 及其 `repo-research-contract/v1`；输出 Hypothesis、TaskOutcome 和 WorkResult。
+- **Node semantic enrichment**：只接受 Stage 5 生成的有界 batch，其必须明确 snapshot、WorkItem identity、target nodes、allowed source files、AST/graph context、行数预算、唯一输出路径与 `repo-node-semantic-catalog/v1` schema；输出局部 node semantic entries。
 
-## 约束(PRINCIPLE)
+## 硬门禁
 
-1. 对目标仓库只读;不运行 install/build/test/server,不改任何文件。
-2. 只处理 bundle 任务清单内的目标;探索中发现的新缺口写入 `openQuestions[]`,不扩围。
-3. 每条 fact 必须有 file + line 范围 + snippet;没有行级证据支撑的判断是 openQuestion,不是 fact。
-4. protected / metadata-only 文件不读内容、不引用、不推测其中的值。
-5. evidence 行号必须真实存在;行号越界或 range 无效会被 ingest 拒绝。
-6. 接近 bundle 标注 token 预算时停止扩展,提交已完成部分,剩余任务写 openQuestion。
-7. ingest 返回 `{merged:false, issues:[...]}` 时必须按 issues 修正重试,不得把被拒绝的 JSON 当作已完成。
+1. 保持目标仓库只读。不 install、build、test、启动服务或读取 protected 内容。
+2. 只读取当前 contract/batch 允许的文件、community、entry/target nodes 与邻接范围；不扫全仓、不按覆盖率扩围。
+3. 每条语义断言必须引用 allowed source file 中真实有效的 `sourcePath/startLine/endLine`；无行证据就保留 unknown/inconclusive，不得猜测。
+4. 不承接 parser/import/protected/unsupported-syntax/static-binding diagnostics，不让 agent 修复或猜出确定性结果。
+5. Node enrichment 不合成 Journey、跨页业务路径、用户角色/目标、产品意图或路由顺序；不展开 API request/response 参数表。
+6. 只写任务明确指定的 output path，不创建额外 analysis/catalog/result 文件。不得调用 ingest 或编辑 Claim、Question、Journey、Map、state、trace 与权威 store。
 
-## 流程
+## Semantic research
 
-1. 读 bundle,列出任务;先看内嵌的 L0 `repo-profile` 与 `scan-policy`,确认本轮是在前端、后端、全栈或未知仓库的哪个上下文里工作。不要用 explorer 名称自行假设框架。
-2. 按 `suggestedSearches` 与 relatedNodes 定位代码,小范围读行,不要整读大文件。
-3. 按 bundle 内嵌 `## Output Schema` 逐项自检,补齐全部必填顶层字段:`schemaVersion`、`strategy`、`facts`、`openQuestions`、`observations`、`requestedEvidence`、`gaps`。
-4. 把 JSON 写到 manifest 指定的 output 路径。
-5. 若你是并行 worker,写完 output 后返回给编排者,由编排者串行 ingest。若你是在单会话顺序模式中代编排者执行,再回写:
+1. 核对 WorkItem、ResearchContract、snapshot、InvestigationFrame 与 input artifact identity。
+2. 只回答 contract questions；对每个 Hypothesis 同时寻找支持与反证，生成 `repo-hypothesis/v1` 与逐 question outcome。
+3. 只使用 `proposed|supported|refuted|inconclusive`；依 acceptance criteria 设置 TaskOutcome `satisfied|partially-satisfied|blocked|failed`。
+4. 新问题只分为 `semantic-ambiguity|runtime-external-blocked|product-intent`；只有第一类可被继续规划。
+5. 在 WorkItem 分别指定的 TaskOutcome 与 WorkResult exact paths 写 artifact 和 `repo-work-result/v3`，如实填写 identity、hash、readSet、scope violations、errors 与 host-reported/unavailable usage。
 
-```bash
-npm run --silent understanding:harness -- ingest --package <package-dir> --analysis <output-file> --explorer <name> --round <n>
-```
+## Node semantic enrichment
 
-6. 处理返回:
-   - `{merged:true, ...}`:完成,向编排者返回统计。
-   - `{merged:false, issues:[...]}`:逐条修正 JSON,最多重试 2 次;仍失败时把失败原因整理成 openQuestion-only analysis 再 ingest 一次并如实上报 rejected。
-7. 禁止为了通过校验而删除证据、编造行号或调高 confidence。
+1. 核对 batch snapshot/WorkItem identity、target file/entity IDs、允许文件、AST/graph refs、行数预算、output path 与 schema。任一项缺失就拒绝。
+2. 只为 batch 显式列出的 target files 生成 entry。直接邻居只作证据或 collaborator，不得自动变成新 target。
+3. 按 `repo-node-semantic-catalog/v1` 填写 responsibility、inputs、actions、state、outputs、conditions、boundaries、collaborators、unknowns、confidence 与 producer。责任、字段语义与 collaborator role 都必须有行证据；identity/entity/kind 从 batch/graph 复制，不推断。
+4. 证据只写稳定源码路径与行号范围，不复制 snippet。预算用完即停止，未确认内容写入 `unknowns`。
+5. bounded batch 输出的 catalog status 使用 `partial`，entry 默认使用 `draft`；只有下游 scope/schema/evidence 验收可把 entry 提升为 `accepted`，worker 不得自行宣称 Stage 6 `complete`。
+6. 只将 catalog JSON 写到 batch 的 exact output path，然后返回控制权。
 
-## 返回给编排者
+## 返回
 
-返回处理任务数、facts 提交/接受数、openQuestions 数、是否触及预算上限、未覆盖任务列表。不要复述 facts 内容,它们已经落在 package output 里。
+返回当前模式、WorkItem/batch identity、exact output path、target 处理数、未确认/未满足项、读取范围和预算状态。Semantic research 附 outcome/Hypothesis 汇总；node enrichment 附 draft/blocked entry 汇总。不要宣称 Hypothesis 已成为 accepted Claim，也不要宣称 draft node semantic 已被验收。

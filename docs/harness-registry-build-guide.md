@@ -1,5 +1,8 @@
 # Harness 扩展轴注册表 · Codex 构建指南
 
+> 历史 v2 构建指南，已归档。其 explorer/gap-queue 注册表不属于当前 v3
+> 执行契约；当前编排与产物契约见 `docs/repo-understanding-harness-design.md`。
+
 > 背景:变更容忍度评审发现,系统对"加功能"是散弹手术(explorer 4 文件 5+ 处、谓词 6 文件)、对"删功能"是假支持,三个已证实缺陷:
 > **D1** `harness.config.json` 的 `explorers.<name>.enabled` 是死配置——grep 全部 harness+shared 代码零处读取;
 > **D2** `executableGapTasks`(harness.mjs)不知道 explorer 集合,删/禁 explorer 后其 open 任务永远算 executable → `nextAction` 永远 `dispatch`,靠 `maxExplorerRounds` 保险丝逃生;

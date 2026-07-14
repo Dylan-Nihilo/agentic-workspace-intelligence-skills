@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-product-map-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "snapshotId", "projectionKey", "projections", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-product-map-manifest/v1" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "projectionKey": { "$ref": "repo-product-map-common.schema.json#/$defs/projectionKey" },
+    "projections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "experience", "runtimeFlow", "change"],
+      "properties": {
+        "application": { "$ref": "#/$defs/entry" },
+        "experience": { "$ref": "#/$defs/entry" },
+        "runtimeFlow": { "$ref": "#/$defs/entry" },
+        "change": { "$ref": "#/$defs/entry" }
+      }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "schemaVersion", "contentHash"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "schemaVersion": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "description": "SHA-256 of canonical Product Map semantics; operational timestamp fields are excluded.", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

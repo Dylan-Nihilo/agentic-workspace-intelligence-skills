@@ -1,4 +1,4 @@
 interface:
   display_name: "Repo Explorer"
-  short_description: "Execute one read-only repo exploration bundle"
-  default_prompt: "Use $repo-explorer to process a repo-understanding dispatch bundle and write evidence-backed facts."
+  short_description: "Research semantics or enrich bounded nodes"
+  default_prompt: "Use $repo-explorer for exactly one dispatched mode: a semantic-research WorkItem or a bounded Stage 6 node-semantic enrichment batch. Keep the repository read-only, ground every semantic claim in source lines, write only the exact requested output, and never synthesize Journeys, business paths, API parameter tables, or deterministic diagnostics."

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-synthesis-narrative.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "mapManifestRef",
+    "projectionKey",
+    "title",
+    "executiveSummary",
+    "applicationSummary",
+    "experienceSummary",
+    "runtimeFlowSummary",
+    "changeSummary",
+    "journeySummaries",
+    "limitations",
+    "mapRefs",
+    "journeyRefs",
+    "claimRefs",
+    "evidenceRefs",
+    "questionRefs",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-synthesis-narrative/v3" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "mapManifestRef": { "type": "string", "minLength": 1 },
+    "projectionKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshotId", "staticGraphHash", "acceptedClaimSetHash", "journeySetHash", "investigationFrameHash", "projectionGeneratorVersion"],
+      "properties": {
+        "snapshotId": { "type": "string", "minLength": 1 },
+        "staticGraphHash": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "acceptedClaimSetHash": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "journeySetHash": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "investigationFrameHash": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "projectionGeneratorVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "executiveSummary": { "type": "string", "minLength": 1 },
+    "applicationSummary": { "type": "string", "minLength": 1 },
+    "experienceSummary": { "type": "string", "minLength": 1 },
+    "runtimeFlowSummary": { "type": "string", "minLength": 1 },
+    "changeSummary": { "type": "string", "minLength": 1 },
+    "journeySummaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["journeyId", "summary", "status", "evidenceRefs"],
+        "properties": {
+          "journeyId": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["closed", "open", "blocked"] },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["limitationId", "category", "summary", "mapDimensions", "journeyIds", "questionIds", "evidenceRefs"],
+        "properties": {
+          "limitationId": { "type": "string", "minLength": 1 },
+          "category": { "enum": ["semantic", "runtime", "product-intent", "deterministic-diagnostic", "journey-closure"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "mapDimensions": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "application-bootstrap",
+                "route-layout-page",
+                "component-composition",
+                "state-ownership-data-flow",
+                "api-client",
+                "auth-permission",
+                "build-deploy",
+                "testing-quality",
+                "core-journeys"
+              ]
+            }
+          },
+          "journeyIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "questionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "mapRefs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "experience", "runtimeFlow", "change"],
+      "properties": {
+        "application": { "type": "string", "minLength": 1 },
+        "experience": { "type": "string", "minLength": 1 },
+        "runtimeFlow": { "type": "string", "minLength": 1 },
+        "change": { "type": "string", "minLength": 1 }
+      }
+    },
+    "journeyRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "claimRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "questionRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

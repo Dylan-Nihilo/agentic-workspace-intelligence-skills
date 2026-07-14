@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-application-map.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mapId",
+    "snapshotId",
+    "supportLevel",
+    "projectionKey",
+    "application",
+    "entities",
+    "relations",
+    "routeLayoutPages",
+    "boundaries",
+    "acceptedSemanticClaimIds",
+    "blockedDimensions",
+    "diagnostics",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-application-map/v1" },
+    "mapId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "supportLevel": { "enum": ["supported-frontend", "frontend-subtree-only"] },
+    "projectionKey": { "$ref": "repo-product-map-common.schema.json#/$defs/projectionKey" },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "framework", "bundler", "roots", "bootstrap", "applicationRoot"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "framework": { "type": "string", "minLength": 1 },
+        "bundler": { "type": "string", "minLength": 1 },
+        "roots": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "bootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entityId", "sourcePath", "kind", "evidenceIds", "confidence"],
+          "properties": {
+            "entityId": { "type": ["string", "null"] },
+            "sourcePath": { "type": ["string", "null"] },
+            "kind": { "type": "string", "minLength": 1 },
+            "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "applicationRoot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entityId", "sourcePath", "evidenceIds", "confidence"],
+          "properties": {
+            "entityId": { "type": ["string", "null"] },
+            "sourcePath": { "type": ["string", "null"] },
+            "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+    "entities": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/entity" } },
+    "relations": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/relation" } },
+    "routeLayoutPages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routeIds", "layoutIds", "pageIds"],
+      "properties": {
+        "routeIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "layoutIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "pageIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "api", "auth", "buildDeploy", "testQuality"],
+      "properties": {
+        "state": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/surface" } },
+        "api": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/surface" } },
+        "auth": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/surface" } },
+        "buildDeploy": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/surface" } },
+        "testQuality": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/surface" } }
+      }
+    },
+    "acceptedSemanticClaimIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "blockedDimensions": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/blockedDimension" } },
+    "diagnostics": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/diagnostic" } },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

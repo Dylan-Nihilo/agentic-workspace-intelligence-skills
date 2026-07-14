@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-community-map.schema.json",
+  "title": "Deterministic Static Program Graph Community Map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "communityMapId",
+    "graphId",
+    "snapshotId",
+    "supportLevel",
+    "status",
+    "algorithm",
+    "communities",
+    "membership",
+    "crossCommunityEdges",
+    "unassignedNodeIds",
+    "diagnostics",
+    "metrics",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-community-map/v1" },
+    "communityMapId": { "type": "string", "minLength": 1 },
+    "graphId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "supportLevel": {
+      "enum": ["supported-frontend", "frontend-subtree-only", "unsupported"]
+    },
+    "status": { "enum": ["ready", "empty", "unsupported"] },
+    "algorithm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "provider",
+        "providerVersion",
+        "graphType",
+        "resolution",
+        "randomWalk",
+        "weightPolicy",
+        "nodeSelection"
+      ],
+      "properties": {
+        "name": { "const": "louvain" },
+        "provider": { "const": "graphology-communities-louvain" },
+        "providerVersion": { "type": "string", "minLength": 1 },
+        "graphType": { "const": "undirected-simple" },
+        "resolution": { "type": "number", "exclusiveMinimum": 0 },
+        "randomWalk": { "const": false },
+        "weightPolicy": { "const": "parallel-edge-count" },
+        "nodeSelection": { "const": "source-backed-program-entities" }
+      }
+    },
+    "communities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/community" }
+    },
+    "membership": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/membership" }
+    },
+    "crossCommunityEdges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/crossCommunityEdge" }
+    },
+    "unassignedNodeIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inputNodeCount",
+        "selectedNodeCount",
+        "unassignedNodeCount",
+        "communityCount",
+        "crossCommunityEdgeCount",
+        "isolatedNodeCount"
+      ],
+      "properties": {
+        "inputNodeCount": { "type": "integer", "minimum": 0 },
+        "selectedNodeCount": { "type": "integer", "minimum": 0 },
+        "unassignedNodeCount": { "type": "integer", "minimum": 0 },
+        "communityCount": { "type": "integer", "minimum": 0 },
+        "crossCommunityEdgeCount": { "type": "integer", "minimum": 0 },
+        "isolatedNodeCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "community": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "communityId",
+        "ordinal",
+        "memberNodeIds",
+        "entryEntityIds",
+        "allowedFiles",
+        "internalEdgeIds",
+        "crossCommunityEdgeIds"
+      ],
+      "properties": {
+        "communityId": { "type": "string", "minLength": 1 },
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "memberNodeIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "entryEntityIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "allowedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "internalEdgeIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "crossCommunityEdgeIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "membership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodeId", "communityId", "nodeKind", "sourcePath"],
+      "properties": {
+        "nodeId": { "type": "string", "minLength": 1 },
+        "communityId": { "type": "string", "minLength": 1 },
+        "nodeKind": { "type": "string", "minLength": 1 },
+        "sourcePath": { "type": "string", "minLength": 1 }
+      }
+    },
+    "crossCommunityEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edgeId",
+        "type",
+        "from",
+        "to",
+        "fromCommunityId",
+        "toCommunityId",
+        "sourcePath"
+      ],
+      "properties": {
+        "edgeId": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "fromCommunityId": { "type": "string", "minLength": 1 },
+        "toCommunityId": { "type": "string", "minLength": 1 },
+        "sourcePath": { "type": ["string", "null"] }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagnosticId", "kind", "severity", "message", "evidenceRefs"],
+      "properties": {
+        "diagnosticId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "message": { "type": "string", "minLength": 1 },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

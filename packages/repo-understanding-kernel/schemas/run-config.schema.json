@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-config.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "mode", "maxContractsPerDispatch", "writtenAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-run-config/v3" },
+    "mode": { "enum": ["fast", "deep"] },
+    "maxContractsPerDispatch": { "type": "integer", "minimum": 1 },
+    "writtenAt": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,5 +1,9 @@
 # Skill 套件规范化设计（对照 ADK 2.0 + Skill 能力包范式）
 
+> v1 历史设计。当前 repo-understanding v3 契约见
+> `docs/repo-understanding-harness-design.md`；2026-07-10 Skill-first v2 规范
+> 仅保留为历史基线。
+
 > 目标：把 `skills/` 下的 **8 个 skill** 从"两族风格分裂、约束靠散文、无版本无测试"整改为一套**统一骨架、按风险控自由度、契约化可回归**的能力包。
 > 方法：审计（8 单元）→ 设计（5 工作流）→ 对抗核查（红线 + 完整性）。本文档是三步综合，**已应用核查发现的事实修正**（见 §0.3）。
 > 前置阅读：`docs/harness-skill-plan.md`（pull 模型 + 4 条红线）、`harnesses/repo-understanding/README.md`（fact-graph 单一事实源）。

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-semantic-store-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "snapshotId", "counts", "hashes", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-semantic-store-manifest/v1" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence", "claims", "acceptedClaims", "refutedClaims"],
+      "properties": {
+        "evidence": { "type": "integer", "minimum": 0 },
+        "claims": { "type": "integer", "minimum": 0 },
+        "acceptedClaims": { "type": "integer", "minimum": 0 },
+        "refutedClaims": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence", "claims"],
+      "properties": {
+        "evidence": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "claims": { "type": "string", "minLength": 64, "maxLength": 64 }
+      }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

@@ -1,4 +1,4 @@
 interface:
   display_name: "Repo Fact Verifier"
-  short_description: "Adversarially verify repo fact graph edges"
-  default_prompt: "Use $repo-fact-verifier to refute or confirm adversarial-verify tasks from a repo-understanding bundle."
+  short_description: "Review node semantics or adjudicate Journeys"
+  default_prompt: "Use $repo-fact-verifier for exactly one typed mode from $repo-understanding: independently review a bounded Stage 6 node-semantic catalog batch, or execute an adjudicate WorkItem v3. Reopen source evidence and never mutate catalogs or authoritative stores."

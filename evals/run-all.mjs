@@ -10,25 +10,55 @@ if (mode === 'contract' || mode === 'all') {
   run('contract', ['evals/contract/run-contract.mjs'])
 }
 
+if (mode === 'datasource' || mode === 'all') {
+  run('datasource', ['evals/datasource/run-datasource-contract.mjs'])
+}
+
 if (mode === 'behavioral' || mode === 'all') {
-  console.log('[behavioral] PENDING (deferred — not asserted): behavioral evals are reserved for the next standardization wave.')
+  run('behavioral', ['evals/behavioral/run-behavioral.mjs'])
 }
 
 if (mode === 'triggering' || mode === 'all') {
-  console.log('[triggering] PENDING (deferred — not asserted): triggering evals are reserved for the next standardization wave.')
+  run('triggering', ['evals/triggering/run-triggering.mjs'])
 }
 
-if (!['contract', 'behavioral', 'triggering', 'all'].includes(mode)) {
+if (mode === 'retrieval' || mode === 'all') {
+  run('retrieval', ['evals/retrieval/run-retrieval.mjs'])
+}
+
+if (mode === 'knowledge' || mode === 'all') {
+  run('knowledge', ['evals/knowledge/run-knowledge.mjs'])
+}
+
+if (mode === 'trajectory' || mode === 'all') {
+  run('trajectory', ['evals/trajectory/run-trajectory.mjs'])
+}
+
+if (mode === 'cost' || mode === 'all') {
+  run('cost', ['evals/cost/run-cost.mjs'])
+}
+
+if (!['contract', 'datasource', 'behavioral', 'triggering', 'retrieval', 'knowledge', 'trajectory', 'cost', 'all'].includes(mode)) {
   console.error(`Unknown eval mode: ${mode}`)
   process.exit(2)
 }
 
 if (mode === 'all') {
-  console.log('[summary] pillars: contract=PASS, behavioral=PENDING, triggering=PENDING')
+  console.log('[summary] pillars: contract=PASS, datasource=PASS, behavioral=PASS, triggering=PASS, retrieval=PASS, knowledge=PASS, trajectory=PASS, cost=PASS')
+} else if (mode === 'datasource') {
+  console.log('[summary] pillars: datasource=PASS')
 } else if (mode === 'behavioral') {
-  console.log('[summary] pillars: behavioral=PENDING')
+  console.log('[summary] pillars: behavioral=PASS')
 } else if (mode === 'triggering') {
-  console.log('[summary] pillars: triggering=PENDING')
+  console.log('[summary] pillars: triggering=PASS')
+} else if (mode === 'retrieval') {
+  console.log('[summary] pillars: retrieval=PASS')
+} else if (mode === 'knowledge') {
+  console.log('[summary] pillars: knowledge=PASS')
+} else if (mode === 'trajectory') {
+  console.log('[summary] pillars: trajectory=PASS')
+} else if (mode === 'cost') {
+  console.log('[summary] pillars: cost=PASS')
 }
 
 function run(label, args) {

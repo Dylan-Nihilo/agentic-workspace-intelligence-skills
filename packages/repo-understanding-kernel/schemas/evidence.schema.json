@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evidence.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "evidenceId", "snapshotId", "kind", "sourcePath", "startLine", "endLine", "extractor", "protected", "capturedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-evidence/v2" },
+    "evidenceId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["source-range", "file-metadata"] },
+    "sourcePath": { "type": "string", "minLength": 1 },
+    "startLine": { "type": ["integer", "null"], "minimum": 1 },
+    "endLine": { "type": ["integer", "null"], "minimum": 1 },
+    "snippet": { "type": "string" },
+    "snippetHash": { "type": "string" },
+    "fileContentHash": { "type": "string" },
+    "extractor": { "type": "string", "minLength": 1 },
+    "protected": { "type": "boolean" },
+    "capturedAt": { "type": "string", "minLength": 1 }
+  }
+}

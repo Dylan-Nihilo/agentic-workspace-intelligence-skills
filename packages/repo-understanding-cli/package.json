@@ -1,0 +1,15 @@
+{
+  "name": "@workspace-intelligence/repo-understanding-cli",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "bin": {
+    "repo-understanding": "src/cli.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

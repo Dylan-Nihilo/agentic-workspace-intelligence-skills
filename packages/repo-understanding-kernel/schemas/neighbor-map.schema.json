@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-neighbor-map.schema.json",
+  "title": "Deterministic Community Neighbor Map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "neighborMapId",
+    "communityMapId",
+    "communityMapRef",
+    "graphId",
+    "snapshotId",
+    "supportLevel",
+    "status",
+    "maxDepth",
+    "entries",
+    "edges",
+    "diagnostics",
+    "metrics",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-neighbor-map/v1" },
+    "neighborMapId": { "type": "string", "minLength": 1 },
+    "communityMapId": { "type": "string", "minLength": 1 },
+    "communityMapRef": { "type": "string", "minLength": 1 },
+    "graphId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "supportLevel": {
+      "enum": ["supported-frontend", "frontend-subtree-only", "unsupported"]
+    },
+    "status": { "enum": ["ready", "empty", "unsupported"] },
+    "maxDepth": { "type": "integer", "minimum": 0 },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/communityNeighbors" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "communityCount",
+        "entryEntityCount",
+        "entityReferenceCount",
+        "edgeReferenceCount",
+        "boundaryEdgeCount"
+      ],
+      "properties": {
+        "communityCount": { "type": "integer", "minimum": 0 },
+        "entryEntityCount": { "type": "integer", "minimum": 0 },
+        "entityReferenceCount": { "type": "integer", "minimum": 0 },
+        "edgeReferenceCount": { "type": "integer", "minimum": 0 },
+        "boundaryEdgeCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "communityNeighbors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "communityId",
+        "entryEntityIds",
+        "homeEntityIds",
+        "entityIds",
+        "neighborCommunityIds",
+        "allowedFiles",
+        "layers",
+        "edgeIds",
+        "boundaryEdgeIds"
+      ],
+      "properties": {
+        "communityId": { "type": "string", "minLength": 1 },
+        "entryEntityIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "homeEntityIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "entityIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "neighborCommunityIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "allowedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "layers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/depthLayer" }
+        },
+        "edgeIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "boundaryEdgeIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "depthLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["depth", "entityIds", "communityIds", "sourceFiles", "edgeIds"],
+      "properties": {
+        "depth": { "type": "integer", "minimum": 0 },
+        "entityIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "communityIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "sourceFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "edgeIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edgeId",
+        "type",
+        "from",
+        "to",
+        "fromCommunityId",
+        "toCommunityId",
+        "crossCommunity",
+        "sourcePath"
+      ],
+      "properties": {
+        "edgeId": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "fromCommunityId": { "type": "string", "minLength": 1 },
+        "toCommunityId": { "type": "string", "minLength": 1 },
+        "crossCommunity": { "type": "boolean" },
+        "sourcePath": { "type": ["string", "null"] }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagnosticId", "kind", "severity", "message", "evidenceRefs"],
+      "properties": {
+        "diagnosticId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "message": { "type": "string", "minLength": 1 },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

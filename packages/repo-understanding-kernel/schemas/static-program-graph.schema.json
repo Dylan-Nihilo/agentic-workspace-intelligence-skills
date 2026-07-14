@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-static-program-graph.schema.json",
+  "title": "Deterministic Frontend Static Program Graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "graphId",
+    "structureFingerprint",
+    "snapshotId",
+    "supportDecisionRef",
+    "supportLevel",
+    "roots",
+    "frameworks",
+    "languages",
+    "parser",
+    "files",
+    "nodes",
+    "edges",
+    "diagnostics",
+    "metrics",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-static-program-graph/v1" },
+    "graphId": { "type": "string", "minLength": 1 },
+    "structureFingerprint": { "type": "string", "pattern": "^structure:sha256:[a-f0-9]{64}$" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "supportDecisionRef": { "type": "string", "minLength": 1 },
+    "supportLevel": {
+      "enum": ["supported-frontend", "frontend-subtree-only", "unsupported"]
+    },
+    "roots": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "frameworks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "fileCount"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "fileCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "parser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "providers", "toolchainFingerprint"],
+      "properties": {
+        "mode": { "enum": ["compiler", "hybrid", "fallback"] },
+        "toolchainFingerprint": { "type": "string", "minLength": 1 },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "available", "version"],
+            "properties": {
+              "name": { "enum": ["typescript", "@babel/parser", "@vue/compiler-sfc", "svelte/compiler"] },
+              "available": { "type": "boolean" },
+              "version": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourcePath",
+          "language",
+          "contentHash",
+          "structureFingerprint",
+          "parser",
+          "parseStatus",
+          "sourceKind",
+          "evidenceRefs"
+        ],
+        "properties": {
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "language": { "type": "string", "minLength": 1 },
+          "contentHash": { "type": ["string", "null"] },
+          "structureFingerprint": { "type": "string", "pattern": "^structure:sha256:[a-f0-9]{64}$" },
+          "parser": { "type": "string", "minLength": 1 },
+          "parseStatus": {
+            "enum": ["parsed", "partial", "fallback", "fallback-after-error", "unreadable"]
+          },
+          "sourceKind": { "type": "string", "minLength": 1 },
+          "evidenceRefs": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceFiles",
+        "parsedFiles",
+        "compilerParsedFiles",
+        "fallbackParsedFiles",
+        "nodeCount",
+        "edgeCount",
+        "diagnosticCount",
+        "parseFailureCount",
+        "importResolutionFailureCount"
+      ],
+      "properties": {
+        "sourceFiles": { "type": "integer", "minimum": 0 },
+        "parsedFiles": { "type": "integer", "minimum": 0 },
+        "compilerParsedFiles": { "type": "integer", "minimum": 0 },
+        "fallbackParsedFiles": { "type": "integer", "minimum": 0 },
+        "nodeCount": { "type": "integer", "minimum": 0 },
+        "edgeCount": { "type": "integer", "minimum": 0 },
+        "diagnosticCount": { "type": "integer", "minimum": 0 },
+        "parseFailureCount": { "type": "integer", "minimum": 0 },
+        "importResolutionFailureCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourcePath",
+        "line",
+        "range",
+        "provider",
+        "sourceKind",
+        "structureFingerprint"
+      ],
+      "properties": {
+        "sourcePath": { "type": ["string", "null"] },
+        "line": { "type": ["integer", "null"], "minimum": 1 },
+        "range": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "$ref": "#/$defs/sourcePosition" },
+            "end": { "$ref": "#/$defs/sourcePosition" }
+          }
+        },
+        "provider": { "type": "string", "minLength": 1 },
+        "sourceKind": { "type": "string", "minLength": 1 },
+        "structureFingerprint": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sourcePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offset", "line", "column"],
+      "properties": {
+        "offset": { "type": "integer", "minimum": 0 },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodeId",
+        "kind",
+        "label",
+        "language",
+        "frameworks",
+        "source",
+        "evidenceRefs",
+        "attributes"
+      ],
+      "properties": {
+        "nodeId": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": [
+            "module",
+            "symbol",
+            "route",
+            "component-reference",
+            "external-package",
+            "unresolved-module",
+            "resource",
+            "bootstrap",
+            "layout",
+            "page",
+            "ui-element",
+            "ui-event",
+            "handler",
+            "state",
+            "request",
+            "endpoint",
+            "response",
+            "feedback-candidate",
+            "outcome-candidate",
+            "auth-guard",
+            "build-wiring",
+            "test-wiring"
+          ]
+        },
+        "label": { "type": "string", "minLength": 1 },
+        "language": { "type": "string", "minLength": 1 },
+        "frameworks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "source": { "$ref": "#/$defs/source" },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "attributes": { "type": "object" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edgeId", "type", "from", "to", "source", "evidenceRefs", "confidence", "attributes"],
+      "properties": {
+        "edgeId": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": [
+            "declares",
+            "exports",
+            "declares-route",
+            "imports",
+            "dynamic-imports",
+            "re-exports-from",
+            "renders-component",
+            "imports-resource",
+            "registers-root",
+            "uses-router",
+            "outlet-renders-route",
+            "route-renders-page",
+            "route-uses-layout",
+            "contains-ui-element",
+            "emits-ui-event",
+            "invokes-handler",
+            "mutates-state",
+            "issues-request",
+            "targets-endpoint",
+            "receives-response",
+            "produces-feedback-candidate",
+            "produces-outcome-candidate",
+            "guarded-by",
+            "configures-build",
+            "configures-test"
+          ]
+        },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "source": { "$ref": "#/$defs/source" },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "attributes": { "type": "object" }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagnosticId", "kind", "severity", "message", "sourcePath", "line", "details", "evidenceRefs"],
+      "properties": {
+        "diagnosticId": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "message": { "type": "string", "minLength": 1 },
+        "sourcePath": { "type": ["string", "null"] },
+        "line": { "type": ["integer", "null"], "minimum": 1 },
+        "details": { "type": "object" },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

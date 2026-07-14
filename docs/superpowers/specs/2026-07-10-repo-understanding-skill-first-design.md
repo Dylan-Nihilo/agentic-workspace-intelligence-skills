@@ -1,10 +1,14 @@
-# Repo Understanding Skill-first 重构设计
+# Repo Understanding Skill-first 重构设计（v2 历史基线）
 
-- 状态：已批准
+- 状态：已被 v3 前端优先协议取代，仅保留为历史决策记录
 - 日期：2026-07-10
 - 架构定位：ADK 2.0-aligned runtime-neutral workflow protocol
 - 产品边界：Skill-first
 - 决策：不提供任何 runtime adapter、runtime runner 或 legacy integration
+
+> 当前权威协议见 `docs/repo-understanding-harness-design.md`。下文的
+> `repo-work-item/v2`、`repo-work-result/v2`、FactGraph/wiki 与通用单仓输出
+> 只描述上一代基线，不得用于实现或验收 v3。
 
 ## 1. 摘要
 
@@ -187,6 +191,7 @@ WorkItem schemaVersion 为 repo-work-item/v2，至少包含：
 | criticality | low、medium、high |
 | budgetHints | 文件数、上下文字节、预期完成范围 |
 | idempotencyKey | 同一 snapshot 和任务语义下稳定 |
+| retryOf | 重试 attempt 指向被替代的前一 WorkItem；初次执行省略 |
 
 qualityClass 和 budgetHints 都是 host 可忽略的声明式提示，不是 runtime 命令。
 
@@ -196,7 +201,7 @@ WorkResult envelope schemaVersion 为 repo-work-result/v2，至少包含：
 
 | 字段 | 含义 |
 | --- | --- |
-| itemId、runId、attempt | 必须与 WorkItem 完全匹配 |
+| itemId、runId、snapshotId、attempt | 必须与 WorkItem 完全匹配 |
 | status | completed、failed、blocked |
 | output | completed 时指向角色专属结果 artifact；failed 或 blocked 时可省略 |
 | evidenceRefs | 本次读取的 source Evidence 引用 |
@@ -273,6 +278,10 @@ run-state schemaVersion 为 repo-run-state/v2。
 
 只要存在 issued 项，nextAction 不得为 synthesize、project 或 done。存在 result-produced 时必须优先 ingest。Blocking 项只有 accepted 或依据 policy、用户授权显式 waived 才算 resolved；critical blocking 项禁止自动 waive。Rejected 或 abandoned 的 blocking attempt 必须创建替代 attempt；无法替代时 run 进入 blocked，不能通过 Join。非 blocking 项可以 rejected、abandoned 或 waived 后结束。
 
+### 8.4 Debug Agent Trace
+
+调试阶段必须写 `debug/agent-trace.jsonl`，schemaVersion 为 repo-agent-trace/v1。每个 WorkItem 至少有 work-issued；host 在实际调用 worker 前后追加 agent-started 与 agent-completed 或 agent-failed。runtime、model、session、duration、token 和 cost 只记录 runtime 明确提供的数据。未提供时使用 `usage.status=unavailable`，禁止估算。`debug` 命令聚合调用计数、usage 报告率、token/cost 总量和逐 WorkItem timeline。
+
 ## 9. Knowledge Data Model
 
 ### 9.1 RepoSnapshot
@@ -334,7 +343,7 @@ Projection 包含：
 
 Projection 记录 projectionVersion、snapshotId、claimSetHash 和生成器版本。任何 Projection 都不得反向修改 Claim。
 
-新 FactGraph 使用 repo-fact-graph/v2。迁移期允许额外生成 repo-fact-graph/v1 兼容 Projection，但 v1 只能从 v2 Claim Store 单向生成。
+新 FactGraph 使用 `repo-fact-graph/v2`。本次实现不生成或读取 v1 兼容 Projection；所有 consumer 直接读取 v2 Projection，或从 Claim Store 确定性重建内存视图。
 
 ## 10. L0 与扫描策略
 
@@ -514,7 +523,7 @@ explore 命令及其 --runner codex 路径直接删除。同步删除 codexAvail
 
 ### 16.3 数据兼容边界
 
-旧 FactGraph、wiki 和 HTML 文件格式可以在迁移期作为 versioned Projection 生成，但只能由新 Claim Store 单向生成。禁止旧路径与新路径双写，禁止旧文件反向 ingest 到 Claim Store。
+本实现不生成旧 FactGraph 或重复的根目录 Projection，也不读取旧文件反向恢复 Claim Store。Wiki、HTML 和 RenderGraph 全部从新 Claim Store 与 v2 Projection 单向生成。
 
 ### 16.4 Strangler 边界
 

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-frontend-verification.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "packageDir",
+    "phase",
+    "snapshotId",
+    "supportLevel",
+    "terminal",
+    "passed",
+    "issues",
+    "warnings",
+    "gates"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-frontend-verification/v1" },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "packageDir": { "type": "string", "minLength": 1 },
+    "phase": { "enum": ["analysis", "projection", "synthesis", "complete"] },
+    "snapshotId": { "type": ["string", "null"] },
+    "supportLevel": { "enum": ["supported-frontend", "frontend-subtree-only", "unsupported", null] },
+    "terminal": { "enum": ["unsupported", null] },
+    "passed": { "type": "boolean" },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "artifactRef", "message"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "artifactRef": { "type": ["string", "null"] },
+          "message": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "warnings": { "type": "array" },
+    "gates": {
+      "type": "object",
+      "required": [
+        "staticGraph",
+        "investigationFrame",
+        "semanticStore",
+        "activeWorkItems",
+        "blockingFailures",
+        "contractStates",
+        "criticalQuestions",
+        "journeys",
+        "productMaps",
+        "narrative",
+        "humanProjection"
+      ],
+      "properties": {
+        "staticGraph": { "type": "boolean" },
+        "investigationFrame": { "type": "boolean" },
+        "semanticStore": { "type": "object" },
+        "activeWorkItems": { "type": "array", "items": { "type": "string" } },
+        "blockingFailures": { "type": "array", "items": { "type": "string" } },
+        "contractStates": { "type": "array" },
+        "criticalQuestions": { "type": "array" },
+        "journeys": { "type": "object" },
+        "productMaps": { "type": "object" },
+        "narrative": { "type": "object" },
+        "humanProjection": { "type": "object" }
+      }
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-runtime-flow-map.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mapId",
+    "snapshotId",
+    "projectionKey",
+    "flows",
+    "unboundJourneyIds",
+    "blockedDimensions",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-runtime-flow-map/v1" },
+    "mapId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "projectionKey": { "$ref": "repo-product-map-common.schema.json#/$defs/projectionKey" },
+    "flows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["flowId", "journeyId", "status", "steps", "transitions", "evidenceIds", "claimIds"],
+        "properties": {
+          "flowId": { "type": "string", "minLength": 1 },
+          "journeyId": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["open", "closed", "blocked", "invalidated"] },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "runtimeStepId",
+                "journeyStepId",
+                "order",
+                "branchId",
+                "kind",
+                "entityId",
+                "sourcePath",
+                "evidenceIds",
+                "claimIds",
+                "confidence",
+                "status"
+              ],
+              "properties": {
+                "runtimeStepId": { "type": "string", "minLength": 1 },
+                "journeyStepId": { "type": "string", "minLength": 1 },
+                "order": { "type": "integer", "minimum": 1 },
+                "branchId": { "type": ["string", "null"] },
+                "kind": { "enum": ["route", "layout", "page", "ui-element", "event", "handler", "effect", "state-transition", "request", "endpoint", "response", "feedback", "outcome"] },
+                "entityId": { "type": "string", "minLength": 1 },
+                "sourcePath": { "type": ["string", "null"] },
+                "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+                "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+                "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                "status": { "enum": ["confirmed", "candidate", "conflicted", "missing"] }
+              }
+            }
+          },
+          "transitions": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/relation" } },
+          "evidenceIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "claimIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        }
+      }
+    },
+    "unboundJourneyIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "blockedDimensions": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/blockedDimension" } },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

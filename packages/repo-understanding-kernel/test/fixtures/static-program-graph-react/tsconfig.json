@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "ExactHome": ["src/pages/Home.tsx"],
+      "fallback/*": ["generated/*", "src/*"]
+    }
+  }
+}

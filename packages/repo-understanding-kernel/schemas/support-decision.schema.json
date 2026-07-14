@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-support-decision.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "supportLevel",
+    "repoKind",
+    "unsupportedReason",
+    "frontendRoots",
+    "backendRoots",
+    "evidenceRefs",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-support-decision/v1" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "supportLevel": {
+      "enum": ["supported-frontend", "frontend-subtree-only", "unsupported"]
+    },
+    "repoKind": { "enum": ["frontend", "fullstack", "backend", "unknown"] },
+    "unsupportedReason": { "type": ["string", "null"] },
+    "frontendRoots": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "backendRoots": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

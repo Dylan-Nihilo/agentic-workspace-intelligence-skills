@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-research-contract.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "snapshotId",
+    "investigationFrameId",
+    "questions",
+    "hypotheses",
+    "targetMaps",
+    "targetJourneys",
+    "scope",
+    "deterministicContextRefs",
+    "acceptanceCriteria",
+    "completionRules",
+    "stopRules",
+    "blockedPolicies",
+    "budgetHints"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-research-contract/v1" },
+    "contractId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "investigationFrameId": { "type": "string", "minLength": 1 },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "questionId",
+          "question",
+          "rationale",
+          "criticality",
+          "blocking",
+          "targetMaps",
+          "targetJourneyIds",
+          "supportEvidenceRequirements",
+          "counterEvidenceRequirements",
+          "completionCriteria",
+          "blockedConditions"
+        ],
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "criticality": { "enum": ["low", "medium", "high", "critical"] },
+          "blocking": { "type": "boolean" },
+          "targetMaps": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "enum": ["application", "experience", "runtime-flow", "change"] }
+          },
+          "targetJourneyIds": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "supportEvidenceRequirements": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "counterEvidenceRequirements": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "completionCriteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "blockedConditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hypothesisId",
+          "questionId",
+          "statement",
+          "subject",
+          "predicate",
+          "object",
+          "hypothesisType",
+          "expectedSupportEvidence",
+          "expectedCounterEvidence",
+          "qualifiers",
+          "initialConfidence"
+        ],
+        "properties": {
+          "hypothesisId": { "type": "string", "minLength": 1 },
+          "questionId": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "subject": { "type": "string", "minLength": 1 },
+          "predicate": { "type": "string", "minLength": 1 },
+          "object": {},
+          "hypothesisType": { "type": "string", "minLength": 1 },
+          "expectedSupportEvidence": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "expectedCounterEvidence": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "qualifiers": { "type": "object" },
+          "initialConfidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "targetMaps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["application", "experience", "runtime-flow", "change"] }
+    },
+    "targetJourneys": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["communityIds", "entryEntities", "allowedFiles", "neighborDepth"],
+      "properties": {
+        "communityIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "entryEntities": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "neighborDepth": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "deterministicContextRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterionId", "description", "questionIds", "hypothesisIds", "blocking", "minimumEvidenceCount"],
+        "properties": {
+          "criterionId": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "questionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "hypothesisIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "blocking": { "type": "boolean" },
+          "minimumEvidenceCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "completionRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "description", "blockingMapDimensions", "blockingJourneyIds"],
+        "properties": {
+          "ruleId": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "blockingMapDimensions": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "application-bootstrap",
+                "route-layout-page",
+                "component-composition",
+                "state-ownership-data-flow",
+                "api-client",
+                "auth-permission",
+                "build-deploy",
+                "testing-quality",
+                "core-journeys"
+              ]
+            }
+          },
+          "blockingJourneyIds": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "stopRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "condition", "action"],
+        "properties": {
+          "ruleId": { "type": "string", "minLength": 1 },
+          "condition": { "type": "string", "minLength": 1 },
+          "action": { "enum": ["stop", "continue", "block"] }
+        }
+      }
+    },
+    "blockedPolicies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "action", "description"],
+        "properties": {
+          "category": { "enum": ["runtime-external-blocked", "product-intent", "budget-exhausted"] },
+          "action": { "enum": ["block", "defer", "request-input", "fail"] },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "budgetHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxFiles": { "type": "integer", "minimum": 1 },
+        "maxContextBytes": { "type": "integer", "minimum": 1 },
+        "maxOutputBytes": { "type": "integer", "minimum": 1 },
+        "maxTokens": { "type": "integer", "minimum": 1 },
+        "maxDurationMs": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

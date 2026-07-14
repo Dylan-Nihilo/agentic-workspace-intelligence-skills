@@ -2,7 +2,7 @@
 name: agentic-coding-audit
 version: 1.0.0
 lastValidated: 2026-07-07
-description: Fill the coding pool (datasource/pools/coding) with DETERMINISTIC static code evidence and agent analyses that carry evidence references, then export audit-data-compatible JSON. Use to populate the coding pool of a multi-repository workspace datasource including micro-frontend systems — this writes a datasource pool, not a fact-graph (for single-repo fact-graphs use repo-understanding). Invoked by agentic-datasource-orchestrator. Keywords - coding pool, 静态代码证据, deterministic tooling, evidenceRefs, audit-data 导出.
+description: Fill the coding pool (datasource/pools/coding) with DETERMINISTIC static code evidence and agent analyses that carry evidence references, then export audit-data-compatible JSON. Use to populate the coding pool of a multi-repository workspace datasource including micro-frontend systems — this writes a datasource pool, not a single-repository understanding package (for that use repo-understanding). Invoked by agentic-datasource-orchestrator. Keywords - coding pool, 静态代码证据, deterministic tooling, evidenceRefs, audit-data 导出.
 ---
 
 # Agentic Coding Audit Skill

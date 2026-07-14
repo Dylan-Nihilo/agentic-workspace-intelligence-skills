@@ -1,5 +1,10 @@
 # Human-readable HTML 重设计 · Codex 构建指南
 
+> 历史 v2 构建记录，已归档。文中的 FactGraph 与
+> `shared/understanding/human-readable-html.mjs` 已退出执行面；当前 HTML
+> 只消费四张 Product Maps、governed Journeys 与已验收 narrative。当前协议见
+> `docs/repo-understanding-harness-design.md`。
+
 > 诊断结论：**问题九成在渲染逻辑，不在数据质量**——值钱的语义数据（111 routes-to / 102 dynamic-imports / 795 imports / 36 depends-on）已在 `fact-graph.json` 里，HTML 却渲染了 code-map 的 7 桶烂聚合 + 内部 QA 遥测。本指南把页面从"管线仪表盘"改成"仓库导览"。
 > **改动范围**：绝大多数是**单文件** `shared/understanding/human-readable-html.mjs`（渲染），加一个上游编排项（synthesis 必须先跑）。
 > 基于真实包验证：`outputs/code-understanding/shop-manage-mobile-20260706-182841/`（Vue3+Vant 移动端，108 路由 / 7 router 文件 / 234 源文件，且**无** `analyses/repo-understanding.json`）。

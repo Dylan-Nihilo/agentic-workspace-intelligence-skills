@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-change-map.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mapId",
+    "snapshotId",
+    "projectionKey",
+    "changeSets",
+    "blockedDimensions",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-change-map/v1" },
+    "mapId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "projectionKey": { "$ref": "repo-product-map-common.schema.json#/$defs/projectionKey" },
+    "changeSets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "changeSetId",
+          "subjectId",
+          "sourcePath",
+          "entityIds",
+          "reverseDependencies",
+          "impactedRouteIds",
+          "impactedPageIds",
+          "impactedJourneyIds",
+          "impactedSurfaces",
+          "confidence",
+          "blockedDimensions"
+        ],
+        "properties": {
+          "changeSetId": { "type": "string", "minLength": 1 },
+          "subjectId": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": ["string", "null"] },
+          "entityIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "reverseDependencies": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "impactedRouteIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "impactedPageIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "impactedJourneyIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "impactedSurfaces": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "api", "auth", "tests", "buildDeploy"],
+            "properties": {
+              "state": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+              "api": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+              "auth": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+              "tests": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+              "buildDeploy": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+            }
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "blockedDimensions": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/blockedDimension" } }
+        }
+      }
+    },
+    "blockedDimensions": { "type": "array", "items": { "$ref": "repo-product-map-common.schema.json#/$defs/blockedDimension" } },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  }
+}

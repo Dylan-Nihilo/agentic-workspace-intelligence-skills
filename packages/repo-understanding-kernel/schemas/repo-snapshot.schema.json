@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-snapshot.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "snapshotId", "repo", "fingerprint", "scanRoots", "protectedPolicy", "files", "createdAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-snapshot/v2" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "repo": { "type": "object", "required": ["name", "path"] },
+    "fingerprint": {
+      "type": "object",
+      "required": ["algorithm", "value", "dirty"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "value": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "scanRoots": { "type": "array", "items": { "type": "string" } },
+    "protectedPolicy": { "type": "object", "required": ["mode", "protectedFileCount"] },
+    "files": { "type": "array" },
+    "createdAt": { "type": "string", "minLength": 1 }
+  }
+}

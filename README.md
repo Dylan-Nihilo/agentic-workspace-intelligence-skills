@@ -1,197 +1,244 @@
-<div align="center">
-
 # Agentic Workspace Intelligence Skills
 
-**对你的 AI 说一句"理解这个仓库",拿到一张能打开的页面——中间每一步都有证据、有门禁、可复算。**
+这个仓库包含两类能力：
 
-![Node](https://img.shields.io/badge/node-%3E%3D20-2f6f4e?style=flat-square)
-![Contract Eval](https://img.shields.io/badge/eval%3Acontract-passing-1f7a4d?style=flat-square)
-![Source of Truth](https://img.shields.io/badge/source%20of%20truth-fact--graph.json-2b6cb0?style=flat-square)
-![Runtime](https://img.shields.io/badge/agent%20runtime-neutral-6b46c1?style=flat-square)
+- `repo-*`：把一个前端仓库或全栈仓库中的前端子树，编译成可验证的程序图、用户旅程、四张 Product Map 和人读页面。
+- `agentic-*`：为多仓 workspace 收集、规范化和导出数据源。
 
-<br/>
+`repo-understanding` 当前执行契约是 frontend-first v3。Host runtime 负责运行 agent；本项目只提供确定性 kernel、CLI、schema 和 runtime-neutral skills，不启动模型，也不绑定某个 agent runtime。
 
-`agent scout` → `结构扫描` → `定向探索` → `对抗验证` → `业务综合` → `人读呈现`
+## Repo Understanding 的产品边界
 
-<sub>一条闭环,从代码仓库到 human-readable.html —— 不落一堆没人消费的数据</sub>
+支持范围由 `static/support-decision.json` 明确记录：
 
-</div>
+| 仓库类型 | 结果 | 行为 |
+|---|---|---|
+| frontend | `supported-frontend` | 分析整个前端范围 |
+| fullstack | `frontend-subtree-only` | 只分析确定识别出的前端 roots |
+| backend | `unsupported` | fail closed，不派 ResearchContract |
+| unknown | `unsupported` | fail closed，不把未知仓库猜成前端 |
 
----
-
-## 这是什么
-
-一套**运行时中立**的 skill 族 + 确定性 harness。任何能读 SKILL.md 的 agent runtime(Codex、Claude Code、或下一个出现的)加载它之后,你只需要:
-
-```
-你:  理解一下 /path/to/repo
-```
-
-agent 会驱动完整闭环,最后交给你:
-
-- 📄 **`human-readable.html`** —— 自包含单页:这个仓库是什么、按业务划分的功能域、每个域的架构图、关键流程与风险(中文,给人看的)
-- 🕸 **`fact-graph.json`** —— 带证据的语义事实图(唯一事实源,给机器和 RAG 用的)
-- 📚 wiki / render-graph / knowledge-index —— 全部是事实图的投影
-
-**核心规则只有一条:`fact-graph.json` 是唯一事实源,其它一切产物都是它的投影。** 没有证据(file + line + snippet)的判断进不了事实图;进不了事实图的内容出现不在任何页面上。
-
-## 设计哲学
-
-本工程是 ADK 2.0「混合式 agentic workflow」的一次完整实践——介于死板 pipeline 与完全自主 agent 之间:
-
-| 原则 | 落地方式 |
-|---|---|
-| 🧭 **确定性骨架,LLM 叶子** | 调度、合并、验证、渲染全是死代码;LLM 出现在 L0 scout、探索(产出带证据的事实)与综合(产出业务解读) |
-| 🔒 **无证据不成事实** | 四层门禁:schema 校验 → 证据行范围检查 → 确定性 verifier → 对抗校验。弱模型污染不了事实图,最坏只是产出变少 |
-| 🧩 **声明优于硬编码** | explorer / 谓词 / 投影三条扩展轴收敛在[注册表](shared/understanding/harness-registry.mjs)里;加节点改一处,删节点是可逆降级,漏改由契约测试报红 |
-| 💰 **算力按需分档** | 每个任务带 `effort` 先验(机械任务 low,裁决综合 high),编排 agent 可裁量调整——裁决与综合永不降档,因为它们的错误没有下游兜底 |
+多仓系统理解仍由 `agentic-datasource-orchestrator` 负责；单仓 repo-understanding 不跨仓扩围。
 
 ## 系统形状
 
-<sub>🟦 确定性节点(死代码) 🟪 LLM 节点(agent 判断) ◇ 门禁</sub>
-
 ```mermaid
 flowchart LR
-  repo(["目标仓库<br/>只读"]) --> L0["L0 agent scout<br/>repo-profile · scan-policy"]
-  L0 --> L1["L1 结构扫描<br/>inventory · code-map · 显式事实"]
-  L1 --> Q["gap 队列<br/>覆盖缺口 + 语义线索"]
-  Q --> D["dispatch<br/>按 explorer 分组 · 带 effort 档位"]
-  D --> E["L2 探索<br/>8 类 explorer 并行"]
-  E --> G1{{"ingest 门禁<br/>schema + 证据"}}
-  G1 --> FG[("fact-graph.json<br/>唯一事实源")]
-  FG --> V["L3 对抗验证<br/>默认怀疑 · 试图反驳"]
-  V --> FG
-  FG -->|"verify 通过"| S["L4 综合<br/>businessDomains · keyFlows · 风险"]
-  S --> G2{{"write-subagent 门禁<br/>零落盘校验"}}
-  G2 --> P["投影渲染(确定性)"]
-  P --> H["📄 human-readable.html"]
-  P --> W["wiki / render-graph / knowledge-index"]
-
-  classDef det fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
-  classDef llm fill:#ede9fe,stroke:#7c3aed,color:#3b2a6b
-  classDef gate fill:#fef3c7,stroke:#d97706,color:#7c4a03
-  classDef truth fill:#dcfce7,stroke:#16a34a,color:#14532d
-  class L1,Q,D,P,H,W det
-  class L0,E,V,S llm
-  class G1,G2 gate
-  class FG truth
+  R["Repository<br/>read only"] --> C["Census + SupportDecision"]
+  C -->|"frontend / frontend subtree"| G["Deterministic compiler<br/>Static Program Graph"]
+  C -->|"backend / unknown"| U["Unsupported<br/>fail closed"]
+  G --> F["InvestigationFrame"]
+  F --> Q{"Genuine semantic ambiguity?"}
+  Q -->|"yes, competing hypotheses"| RC["ResearchContract"]
+  RC --> WI["WorkItem v3"]
+  WI --> WR["TaskOutcome + WorkResult v3"]
+  WR --> J["Join + serial ingest"]
+  J --> K[("Evidence / Claim store")]
+  Q -->|"runtime or product intent"| B["Blocked Question"]
+  G --> JS[("JourneyDefinition / Binding store")]
+  K --> PM["Four Product Maps"]
+  JS --> PM
+  PM --> N["Narrative v3"]
+  N --> H["human-readable.html"]
 ```
 
-循环由 `status.nextAction` 驱动(`dispatch` → 继续探索;`synthesize` → 收敛综合;`done` → 交付)——**agent 从不自行判断"应该够了"**。
+关键约束：
 
-## 五分钟跑通
+- TypeScript、Babel 和 Vue compiler 负责确定性结构抽取；解析或 import 失败进入 diagnostics，不转成 agent 任务。
+- 只有至少存在两个竞争 Hypothesis 的真实语义歧义，才能生成 `ResearchContract`。
+- `runtime-external-blocked` 留作运行时限制；`product-intent` 交给用户或产品资料，均不派 repo explorer。
+- Worker 只能写自己的 TaskOutcome 和 WorkResult；只有 orchestrator ingest 能更新 authoritative store。
+- Host 可以并行执行独立 WorkItem，但必须等待 Join 后串行 ingest。
+- Journey 未闭合、关键问题未解决、Map 过期或 narrative 未 grounding 时，交付门禁不会通过。
+
+## 四类权威数据
+
+| 数据 | 作用 | 主要路径 |
+|---|---|---|
+| Static Program Graph | 编译得到的文件、模块、route、page、UI event、handler、state、request、endpoint 等结构 | `static/static-program-graph.json` |
+| Semantic store | 源文件 Evidence 和经 TaskOutcome 治理后的 accepted/refuted Claim | `store/evidence.jsonl`、`store/claims.jsonl` |
+| Journey store | actor、goal、trigger、steps、feedback、outcomes 及代码实体绑定和 closure report | `store/journeys/` |
+| Product Maps | 面向消费的 Application、Experience、Runtime Flow、Change 四张确定性投影 | `projections/` |
+
+Product Map 的 `projectionKey` 绑定 snapshot、Static Program Graph、accepted Claim 集、Journey 集和 InvestigationFrame。任一语义输入变化都会使旧 Map 失效；`createdAt`、`updatedAt`、`generatedAt`、`evaluatedAt`、`writtenAt` 等运行时间字段不参与 key，保证同一 snapshot 跨运行重建稳定。
+
+## 五分钟看懂命令
 
 ```bash
-# 0. 契约自检(全部断言应绿)
+# 安装 workspace 依赖
+npm install
+
+# 契约测试
 npm run eval:contract
 
-# 1. 生成 L0 scout request,交给 repo-scout agent 写 scout/output.json 后 ingest
-npm run understanding:harness -- scout --repo /path/to/repo --out outputs/code-understanding/my-repo
-npm run understanding:harness -- ingest-scout --package outputs/code-understanding/my-repo --analysis outputs/code-understanding/my-repo/scout/output.json
+# 只做 census / support / static graph / frame 检查
+npm run understanding:harness -- scout \
+  --repo /path/to/frontend-repo \
+  --out /tmp/frontend-understanding
 
-# 2. L1 扫描与建图
-npm run understanding:harness -- analyze --repo /path/to/repo --out outputs/code-understanding/my-repo
+# 建立一次 v3 分析包
+npm run understanding:harness -- analyze \
+  --repo /path/to/frontend-repo \
+  --out /tmp/frontend-understanding \
+  --mode fast
 
-# 3. 看下一步该做什么(dispatch / synthesize / done)
-npm run understanding:harness -- status --package outputs/code-understanding/my-repo
-
-# 4. 派发探索任务(产出 runtime 中立的 bundle,由 agent 或子代理执行后 ingest 回来)
-npm run understanding:harness -- dispatch --package outputs/code-understanding/my-repo
-
-# 5. 综合完成后,渲染人读页面(闭环收尾)
-npm run understanding:harness -- html --package outputs/code-understanding/my-repo
+# nextAction 是编排唯一依据
+npm run understanding:harness -- status \
+  --package /tmp/frontend-understanding
 ```
 
-> 手动跑一遍是理解机制;**日常用法是让 agent 跑**——在支持 skill 的 runtime 里加载 `skills/repo-understanding`,说一句"理解这个仓库",上面的循环由它闭环执行。
+之后按 `status.nextAction` 执行：
 
-## Skill 家族
-
-两条产品线,八个 skill,全部 runtime 中立(不出现任何 runtime/模型专名):
-
-**📦 单仓理解(repo-\*)** —— 一个仓库 → 一个理解包
-
-| Skill | 角色 | effort | 写入通道 |
-|---|---|---|---|
-| [`repo-understanding`](skills/repo-understanding/SKILL.md) | 编排者:驱动全闭环,自己不产事实 | 主线程 | 只调 harness 原语 |
-| [`repo-explorer`](skills/repo-explorer/SKILL.md) | L2 探索 worker:只读取证,产出事实三元组 | 按 bundle 分档 | `ingest` |
-| [`repo-fact-verifier`](skills/repo-fact-verifier/SKILL.md) | L3 反驳者:默认怀疑,试图推翻低置信边 | **high(地板)** | `ingest` verdict |
-| [`repo-synthesizer`](skills/repo-synthesizer/SKILL.md) | L4 综合:业务域划分、关键流程、风险(中文) | **high(地板)** | `write-subagent` |
-| [`repo-human-readable`](skills/repo-human-readable/SKILL.md) | 只读投影:渲染自包含 HTML 页面 | 零 LLM | 只读 |
-
-**🗂 多仓数据源(agentic-\*)** —— 多个仓库 → 一个 workspace datasource
-
-| Skill | 角色 |
+| `nextAction` | 动作 |
 |---|---|
-| [`agentic-datasource-orchestrator`](skills/agentic-datasource-orchestrator/SKILL.md) | 协调 producer skill 分阶段填充数据池并合并导出 |
-| [`agentic-coding-audit`](skills/agentic-coding-audit/SKILL.md) | 确定性静态证据 + 带 evidenceRefs 的分析,填充 coding pool |
-| [`agentic-ce-bridge`](skills/agentic-ce-bridge/SKILL.md) | 桥接外部 agent runtime 的结论进数据池(raw 留痕,parse 失败不伪造) |
+| `dispatch` | 运行 `dispatch`，让 host 执行 manifest 中的 WorkItem |
+| `await-results` | 等待 worker 写完 TaskOutcome 与 WorkResult |
+| `ingest` | 逐个运行 `ingest --work-result ...` |
+| `project` | 生成或刷新四张 Product Map；有 narrative 时同时可生成 HTML |
+| `synthesize` | 生成只读四张 Map 和 Journey 的 narrative WorkItem |
+| `blocked` | 查看 verification、OpenQuestion 和 Journey closure；产品输入确认后用 `journeys` 受控导入，不得手改 store |
+| `done` | 当前 snapshot 的全部门禁已闭合 |
+| `unsupported` | 当前仓库不在 frontend-first 支持范围内 |
 
-## 质量门禁
-
-生成的"理解"被当作软件对待,不是散文。以下全部由**代码强制**(exit≠0)并有契约测试兜底:
-
-| 门禁 | 强制点 |
-|---|---|
-| 探索输出必须过 schema + 证据行范围校验才能入图 | `validateExplorerAnalysis` |
-| 综合写回前置校验,不过则零落盘 | `validateAnalysisBeforeWrite` |
-| 包写入持锁,并发写直接拒绝 | `withPackageWriteLock` |
-| LLM verdict 不能伪造确定性验证标签 | verifier tool 强制归一 |
-| verify 不通过不得进入综合与交付 | `validateUnderstandingPackage` |
-| 受保护文件永远 metadata-only | 全链路 |
-| CE 解析失败保留 raw、非零退出,不伪造分析 | `assertCeParsed` |
+常用命令：
 
 ```bash
-npm run eval:contract   # 契约断言:schema 版本、门禁行为、注册表完整性、golden 零回归
-npm run eval:all        # 契约(asserted) + 行为/触发(诚实标注 PENDING)
+npm run understanding:harness -- dispatch --package /tmp/frontend-understanding
+npm run understanding:harness -- ingest --package /tmp/frontend-understanding \
+  --work-result /tmp/frontend-understanding/work/results/<item>.result.json
+npm run understanding:harness -- journeys --package /tmp/frontend-understanding \
+  --definitions /path/to/definitions.json --bindings /path/to/bindings.json
+npm run understanding:harness -- project --package /tmp/frontend-understanding --only maps
+npm run understanding:harness -- synthesize --package /tmp/frontend-understanding
+npm run understanding:harness -- html --package /tmp/frontend-understanding
+npm run understanding:harness -- verify --package /tmp/frontend-understanding
+npm run understanding:harness -- report --package /tmp/frontend-understanding
+npm run understanding:harness -- debug --package /tmp/frontend-understanding
 ```
+
+`--incremental --base <ref>` 会写 `static/invalidation.json`，记录 changed files 和受影响实体；当前实现仍确定性重建 Static Program Graph，不复用旧语义结论冒充增量正确性。
 
 ## 产物包
 
 ```text
-outputs/code-understanding/<repo>/
-├── human-readable.html      ← 给人看的(首要交付物)
-├── fact-graph.json          ← 唯一事实源
-├── gap-queue.json              探索任务积压(带 explorer + effort)
-├── verification.json           对抗验证记录
-├── render-graph.json           渲染投影
-├── knowledge-index.jsonl       RAG 检索投影
-├── wiki/                       叙述投影
-└── analyses/
-    └── repo-understanding.json  L4 综合(businessDomains / keyFlows / risks)
+<package>/
+├── index.json
+├── static/
+│   ├── inventory.json
+│   ├── code-map.json
+│   ├── repo-profile.json
+│   ├── support-decision.json
+│   ├── static-program-graph.json
+│   ├── community-map.json
+│   ├── neighbor-map.json
+│   ├── investigation-frame.json
+│   └── invalidation.json             # 仅 incremental 运行
+├── planning/
+│   ├── manifest.json
+│   ├── open-questions.json
+│   └── contracts/*.json
+├── research/dispatch/<batch>/
+│   ├── manifest.json
+│   ├── *.md
+│   └── *.task-outcome.json           # worker 写
+├── work/
+│   ├── items/*.json
+│   └── results/*.result.json         # worker 写 envelope
+├── store/
+│   ├── evidence.jsonl
+│   ├── claims.jsonl
+│   ├── semantic-store-manifest.json
+│   ├── journeys/
+│   │   ├── definitions/*.json
+│   │   ├── bindings/*.json
+│   │   ├── closure/*.json
+│   │   └── manifest.json
+│   └── run-events.jsonl
+├── state/
+│   ├── run-state.json
+│   └── run-config.json
+├── projections/
+│   ├── application-map.json
+│   ├── experience-map.json
+│   ├── runtime-flow-map.json
+│   ├── change-map.json
+│   └── manifest.json
+├── synthesis/
+│   ├── research-contract.json
+│   ├── request.md
+│   └── narrative.json
+├── verification/frontend-verification.json
+├── debug/agent-trace.jsonl
+├── report.md
+└── human-readable.html
 ```
+
+`human-readable.html` 是消费层，不是事实源。它必须引用当前 Product Maps、Journey、Claim、Evidence、Question 和 narrative，不能自行发现或改写事实。
+
+## Skill 家族
+
+### 单仓前端理解
+
+| Skill | 角色 | 输入 / 输出边界 |
+|---|---|---|
+| [`repo-understanding`](skills/repo-understanding/SKILL.md) | orchestrator | 只按 `status.nextAction` 调 CLI |
+| [`repo-explorer`](skills/repo-explorer/SKILL.md) | semantic research | ResearchContract → TaskOutcome |
+| [`repo-fact-verifier`](skills/repo-fact-verifier/SKILL.md) | adversarial adjudication | 只裁决 contracted Hypothesis 或高风险 Journey binding |
+| [`repo-synthesizer`](skills/repo-synthesizer/SKILL.md) | narrative | 只读四张 Map 和 governed refs |
+| [`repo-human-readable`](skills/repo-human-readable/SKILL.md) | deterministic presentation | 不生产事实 |
+
+### 多仓 workspace 数据源
+
+| Skill | 角色 |
+|---|---|
+| [`agentic-datasource-orchestrator`](skills/agentic-datasource-orchestrator/SKILL.md) | 协调 producer skill 分阶段填充数据池并合并导出 |
+| [`agentic-coding-audit`](skills/agentic-coding-audit/SKILL.md) | 收集确定性静态证据和带 evidenceRefs 的分析 |
+| [`agentic-ce-bridge`](skills/agentic-ce-bridge/SKILL.md) | 桥接外部 agent runtime 结论；parse 失败保留 raw，不伪造分析 |
+
+## 验证与调试
+
+```bash
+npm run eval:contract
+npm run eval:all
+node --test packages/repo-understanding-kernel/test/*.test.mjs
+```
+
+`verify` 分阶段检查 SupportDecision、snapshot identity、Static Program Graph、semantic store hash、在途 WorkItem、blocking failure、ResearchContract、关键问题、Journey closure、Product Map freshness、narrative grounding 和 HTML freshness。exit code 非零表示当前包不能交付。
+
+`trace` 只记录真实 telemetry；没有数据时写 `usage.status=unavailable`，禁止估算 token、cost 或 duration。
+
+## v3 已移除的旧路径
+
+旧版的 gap/coverage 驱动循环、单一 FactGraph、通用 explorer fan-out、raw analysis ingest、generic backend fallback 以及 architecture/domain/flow 的旧投影链，均不再属于 repo-understanding 的执行契约。`analyze` 会清理旧包中的相关兼容产物，避免 v2/v3 混包。
 
 ## 仓库结构
 
 ```text
 .
-├── skills/            8 个 runtime 中立 skill(薄:零逻辑副本)
-├── harnesses/         repo-understanding 确定性 CLI(analyze/status/dispatch/ingest/verify/html/report)
-├── shared/            单一实现源:事实图引擎、注册表、HTML 渲染器、datasource 逻辑
-├── evals/             契约测试 + mini-repo fixture + golden 基线
-├── docs/              设计文档与构建指南(见下)
-└── outputs/           本地生成的理解包(非源码)
+├── skills/      runtime-neutral skill instructions
+├── packages/    repo-understanding kernel、CLI、schemas、tests
+├── shared/      多仓 datasource 共用逻辑
+├── evals/       contract、behavioral、triggering、knowledge、retrieval、trajectory、cost
+├── docs/        当前设计、教程和维护计划
+└── outputs/     本地生成物，不是源码
 ```
 
 ## 文档地图
 
-| 想了解 | 读这个 |
+| 想了解 | 文档 |
 |---|---|
-| 整体设计与教程 | [harness 设计](docs/repo-understanding-harness-design.md) · [教程](docs/repo-understanding-harness-tutorial.md) |
-| skill 化与 pull 模型 | [harness-skill-plan](docs/harness-skill-plan.md) |
-| Skill 规范化(路由/门禁/上下文) | [设计](docs/skill-standardization-design.md) · [构建指南](docs/skill-standardization-build-guide.md) · [返修](docs/skill-standardization-remediation.md) |
-| 扩展轴注册表(加/删功能) | [构建指南](docs/harness-registry-build-guide.md) |
-| 人读 HTML 重设计 | [设计](docs/human-readable-layer-design.md) · [构建指南](docs/human-readable-redesign-build-guide.md) |
-| 子代理模型分档派遣 | [设计](docs/model-tier-dispatch-design.md) · [构建指南](docs/model-tier-dispatch-build-guide.md) |
+| v3 权威设计 | [Repo Understanding Harness Design](docs/repo-understanding-harness-design.md) |
+| 从空目录跑到 HTML | [Repo Understanding Tutorial](docs/repo-understanding-harness-tutorial.md) |
+| skill 与实现维护边界 | [Harness Skill Plan](docs/harness-skill-plan.md) |
+| 历史 v1/v2：Skill 规范化 | [设计](docs/skill-standardization-design.md) · [构建指南](docs/skill-standardization-build-guide.md) · [返修](docs/skill-standardization-remediation.md) |
+| 历史 v2：模型分档 | [设计](docs/model-tier-dispatch-design.md) · [构建指南](docs/model-tier-dispatch-build-guide.md) |
 | 契约测试 | [evals/README](evals/README.md) |
 
 ## 开发守则
 
-- 确定性逻辑只住 `shared/` 与 `harnesses/`;skill 目录保持薄(禁止校验/合并/投影逻辑副本)。
-- 生成的 JSON 永远不手改——一切写入走 `ingest` / `write-subagent` / `project`。
-- SKILL.md 保持 runtime 中立:能力条件句,零模型名、零 runtime 工具名。
-- 新增门禁必须配契约 fixture;新增 explorer/谓词/投影只改[注册表](shared/understanding/harness-registry.mjs)一处。
-- 人读产物中文 first;事实必须可回溯到 file:line。
-
-<div align="center">
-<sub>fact-graph 是唯一事实源 · 无证据不成事实 · 流程必须闭环到人能打开的页面</sub>
-</div>
+- Worker 不直接改 store、Journey、Map、state 或 trace。
+- 新增语义工作必须先有 ResearchContract；解析器、import、protected-file 问题留在 diagnostics。
+- 新增 Product Map 字段必须绑定 projectionKey，并补 schema、deterministic rebuild 和 stale-input test。
+- 新增 Journey 必须同时有 JourneyDefinition、JourneyBinding 和 closure report。
+- 受保护文件只允许 metadata evidence。
+- 人读层使用中文；标识符、路径和专有名词保持原样。

@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-node-semantic-catalog.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "snapshotId", "status", "entries", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-node-semantic-catalog/v1" },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["empty", "partial", "complete"] },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourcePath", "startLine", "endLine"],
+      "properties": {
+        "sourcePath": { "type": "string", "minLength": 1 },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "confidence", "evidence"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "collaborator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filePath", "role", "evidence"],
+      "properties": {
+        "filePath": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "question", "reason"],
+      "properties": {
+        "kind": { "enum": ["runtime", "product-intent", "out-of-scope"] },
+        "question": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "workItemId"],
+      "properties": {
+        "kind": { "const": "agent" },
+        "workItemId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filePath",
+        "entityIds",
+        "scopeFiles",
+        "semanticKind",
+        "title",
+        "responsibility",
+        "inputs",
+        "actions",
+        "state",
+        "outputs",
+        "conditions",
+        "boundaries",
+        "collaborators",
+        "unknowns",
+        "confidence",
+        "status",
+        "producer"
+      ],
+      "properties": {
+        "filePath": { "type": "string", "minLength": 1 },
+        "entityIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "scopeFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "semanticKind": { "enum": ["page", "view", "component", "route", "state", "service", "shared-utility", "config", "other"] },
+        "title": { "type": "string", "minLength": 1 },
+        "responsibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["summary", "confidence", "evidence"],
+          "properties": {
+            "summary": { "type": "string", "minLength": 1 },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "evidence": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/evidence" }
+            }
+          }
+        },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/statement" } },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/statement" } },
+        "state": { "type": "array", "items": { "$ref": "#/$defs/statement" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/statement" } },
+        "conditions": { "type": "array", "items": { "$ref": "#/$defs/statement" } },
+        "boundaries": { "type": "array", "items": { "$ref": "#/$defs/statement" } },
+        "collaborators": { "type": "array", "items": { "$ref": "#/$defs/collaborator" } },
+        "unknowns": { "type": "array", "items": { "$ref": "#/$defs/unknown" } },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "status": { "enum": ["draft", "accepted", "blocked"] },
+        "producer": { "$ref": "#/$defs/producer" }
+      }
+    }
+  }
+}
