@@ -2,7 +2,7 @@
 
 这个仓库包含两类能力：
 
-- `repo-*`：把一个前端仓库或全栈仓库中的前端子树，编译成可验证的程序图、用户旅程、四张 Product Map 和人读页面。
+- `repo-*`：把一个前端仓库或全栈仓库中的前端子树，编译成可验证的程序图、渐进式 Repository Atlas、用户旅程、四张 Product Map 和人读页面。
 - `agentic-*`：为多仓 workspace 收集、规范化和导出数据源。
 
 `repo-understanding` 当前执行契约是 frontend-first v3。Host runtime 负责运行 agent；本项目只提供确定性 kernel、CLI、schema 和 runtime-neutral skills，不启动模型，也不绑定某个 agent runtime。
@@ -27,10 +27,7 @@ flowchart LR
   R["Repository<br/>read only"] --> C["Census + SupportDecision"]
   C -->|"frontend / frontend subtree"| G["Deterministic compiler<br/>Static Program Graph"]
   C -->|"backend / unknown"| U["Unsupported<br/>fail closed"]
-  G --> NSP["Stage 5<br/>bounded semantic batches"]
-  NSP --> NS["Stage 6<br/>accepted Node Semantics"]
-  NS --> DZ["Stage 7<br/>Agent Domain Zoning"]
-  DZ --> A["repository-atlas.html<br/>same tree, dynamic regions"]
+  G --> A["Repository Atlas<br/>Node Semantics + Domain Zoning"]
   G --> F["InvestigationFrame"]
   F --> Q{"Genuine semantic ambiguity?"}
   Q -->|"yes, competing hypotheses"| RC["ResearchContract"]
@@ -49,15 +46,14 @@ flowchart LR
 关键约束：
 
 - TypeScript、Babel 和 Vue compiler 负责确定性结构抽取；解析或 import 失败进入 diagnostics，不转成 agent 任务。
-- Stage 5 只生成有界文件批次；Stage 6 由 Agent 解释节点并经独立审核接纳；Stage 7 再由 Domain Agent 提议仓库专属领域并由另一个 Agent 复核。
-- Stage 7 沿用 Stage 6 的同一棵文件树、节点 identity、依赖边和展开状态；kernel 不使用路径正则、目录映射或固定标签替 Agent 分类。
+- Repository Atlas 在同一棵文件树上渐进增加节点语义和 Agent 领域划分；领域结果必须独立审核，kernel 不使用静态规则替 Agent 分类。
 - 只有至少存在两个竞争 Hypothesis 的真实语义歧义，才能生成 `ResearchContract`。
 - `runtime-external-blocked` 留作运行时限制；`product-intent` 交给用户或产品资料，均不派 repo explorer。
 - Worker 只能写自己的 TaskOutcome 和 WorkResult；只有 orchestrator ingest 能更新 authoritative store。
 - Host 可以并行执行独立 WorkItem，但必须等待 Join 后串行 ingest。
 - Journey 未闭合、关键问题未解决、Map 过期或 narrative 未 grounding 时，交付门禁不会通过。
 
-## 四类权威数据
+## 六类权威数据
 
 | 数据 | 作用 | 主要路径 |
 |---|---|---|
@@ -93,19 +89,6 @@ npm run understanding:harness -- analyze \
 # nextAction 是编排唯一依据
 npm run understanding:harness -- status \
   --package /tmp/frontend-understanding
-
-# Stage 5-6：生成批次、独立审核并接纳节点语义
-npm run understanding:harness -- semantic-plan --package /tmp/frontend-understanding
-npm run understanding:harness -- semantic-review-plan --package /tmp/frontend-understanding
-npm run understanding:harness -- semantic-ingest --package /tmp/frontend-understanding
-
-# Stage 7：调度领域 Agent、独立审核并接纳领域 catalog
-npm run understanding:harness -- zone-plan --package /tmp/frontend-understanding
-npm run understanding:harness -- zone-review-plan --package /tmp/frontend-understanding
-npm run understanding:harness -- zone-ingest --package /tmp/frontend-understanding
-
-# 重新生成同一棵树上的渐进式 Atlas
-npm run understanding:harness -- atlas --package /tmp/frontend-understanding
 ```
 
 之后按 `status.nextAction` 执行：
@@ -135,6 +118,7 @@ npm run understanding:harness -- html --package /tmp/frontend-understanding
 npm run understanding:harness -- verify --package /tmp/frontend-understanding
 npm run understanding:harness -- report --package /tmp/frontend-understanding
 npm run understanding:harness -- debug --package /tmp/frontend-understanding
+npm run understanding:harness -- atlas --package /tmp/frontend-understanding
 ```
 
 `--incremental --base <ref>` 会写 `static/invalidation.json`，记录 changed files 和受影响实体；当前实现仍确定性重建 Static Program Graph，不复用旧语义结论冒充增量正确性。
@@ -162,15 +146,8 @@ npm run understanding:harness -- debug --package /tmp/frontend-understanding
 │   ├── open-questions.json
 │   └── contracts/*.json
 ├── research/
-│   ├── node-semantics/
-│   │   ├── contexts/*.json
-│   │   ├── results/*.json
-│   │   ├── review-dispatch/*.review-dispatch.json
-│   │   └── reviews/*.review.json
-│   ├── repository-zones/
-│   │   ├── context.json
-│   │   ├── result.json
-│   │   └── review.json
+│   ├── node-semantics/{contexts,results,review-dispatch,reviews}/
+│   ├── repository-zones/{context,result,review}.json
 │   └── dispatch/<batch>/
 │       ├── manifest.json
 │       ├── *.md
@@ -209,7 +186,7 @@ npm run understanding:harness -- debug --package /tmp/frontend-understanding
 └── human-readable.html
 ```
 
-`human-readable.html` 是消费层，不是事实源。它必须引用当前 Product Maps、Journey、Claim、Evidence、Question 和 narrative，不能自行发现或改写事实。
+`repository-atlas.html` 是静态图、节点语义和领域划分的渐进式视图；`human-readable.html` 是最终消费层。两者都不是事实源，不能自行发现或改写事实。
 
 ## Skill 家族
 
