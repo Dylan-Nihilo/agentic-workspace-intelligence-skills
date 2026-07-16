@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-repository-zone-review/v1",
+  "type": "object",
+  "required": ["schemaVersion", "planId", "snapshotId", "catalogHash", "status", "checks", "issues", "reviewer", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-repository-zone-review/v1" },
+    "planId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "catalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": { "enum": ["accepted", "changes-requested"] },
+    "checks": {
+      "type": "object",
+      "required": ["semanticGrounding", "graphCoherence", "completeCoverage", "singleFileIdentity", "notPathOnlyClassification", "noInventedFiles"],
+      "properties": {
+        "semanticGrounding": { "type": "boolean" },
+        "graphCoherence": { "type": "boolean" },
+        "completeCoverage": { "type": "boolean" },
+        "singleFileIdentity": { "type": "boolean" },
+        "notPathOnlyClassification": { "type": "boolean" },
+        "noInventedFiles": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "issues": { "type": "array" },
+    "reviewer": {
+      "type": "object",
+      "required": ["kind", "agentId"],
+      "properties": {
+        "kind": { "const": "agent" },
+        "agentId": { "type": "string", "minLength": 1 },
+        "runId": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

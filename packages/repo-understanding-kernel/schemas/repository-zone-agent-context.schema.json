@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-repository-zone-agent-context/v1",
+  "type": "object",
+  "required": ["schemaVersion", "planId", "graphId", "snapshotId", "semanticCatalogHash", "repo", "graphSummary", "files", "analysisRequirements", "resultContract", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-repository-zone-agent-context/v1" },
+    "planId": { "type": "string", "minLength": 1 },
+    "graphId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "semanticCatalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "repo": { "type": "object" },
+    "graphSummary": { "type": "object" },
+    "files": { "type": "array" },
+    "analysisRequirements": { "type": "array", "items": { "type": "string" } },
+    "resultContract": { "type": "object" },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

@@ -8,6 +8,7 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { verifyNodeSemanticCoverage } from '../../repo-understanding-kernel/src/verification/frontend-package-verifier.mjs'
 import { nodeSemanticCatalogHash } from '../../repo-understanding-kernel/src/knowledge/node-semantic-review.mjs'
+import { repositoryZoneCatalogHash } from '../../repo-understanding-kernel/src/planning/repository-zones.mjs'
 
 const cliPackageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const cliPath = path.join(cliPackageDir, 'src', 'cli.mjs')
@@ -97,6 +98,40 @@ test('semantic-plan and semantic-ingest close Stage 6 coverage and refresh the A
   assert.notEqual(atlasAfterIngest, atlasBeforeIngest)
   assert.match(atlasAfterIngest, /Fixture semantic:/)
   assert.match(atlasAfterIngest, /accepted/)
+
+  const zonePlanResult = runCli(['zone-plan', '--package', fixture.packageDir])
+  assert.equal(zonePlanResult.schemaVersion, 'repo-repository-zone-agent-plan-result/v1')
+  assert.equal(zonePlanResult.status, 'waiting-for-agent')
+  assert.equal(zonePlanResult.authority, 'agent-only')
+  assert.equal(zonePlanResult.allowedFiles, fixture.inventory.files.length)
+  assert.equal(fs.existsSync(path.join(fixture.packageDir, 'planning', 'repository-zones.json')), false)
+  const zonePlan = readJson(zonePlanResult.planPath)
+  const zoneContext = readJson(zonePlanResult.contextPath)
+  assert.equal(zonePlan.zones, undefined)
+  assert.equal(zonePlan.memberships, undefined)
+  assert.equal(zoneContext.files.length, fixture.inventory.files.length)
+  assert.equal(zoneContext.resultContract.producerKind, 'agent')
+
+  const zoneCatalog = buildDomainAgentCatalog({ fixture, plan: zonePlan })
+  writeJson(zonePlanResult.outputPath, zoneCatalog)
+  const staleReviewPath = path.resolve(fixture.packageDir, zonePlan.artifactRefs.reviewRef)
+  const finalZonesPath = path.resolve(fixture.packageDir, zonePlan.artifactRefs.finalRef)
+  writeJson(staleReviewPath, { catalogHash: `sha256:${'0'.repeat(64)}` })
+  writeJson(finalZonesPath, { review: { catalogHash: `sha256:${'0'.repeat(64)}` } })
+  const zoneReviewResult = runCli(['zone-review-plan', '--package', fixture.packageDir])
+  assert.equal(zoneReviewResult.schemaVersion, 'repo-repository-zone-review-plan-result/v1')
+  assert.equal(zoneReviewResult.catalogHash, repositoryZoneCatalogHash(zoneCatalog))
+  assert.equal(fs.existsSync(staleReviewPath), false)
+  assert.equal(fs.existsSync(finalZonesPath), false)
+  writeJson(zoneReviewResult.reviewPath, buildDomainAgentReview({ plan: zonePlan, catalog: zoneCatalog }))
+  const zoneIngestResult = runCli(['zone-ingest', '--package', fixture.packageDir])
+  assert.equal(zoneIngestResult.schemaVersion, 'repo-repository-zone-ingest-result/v1')
+  assert.equal(zoneIngestResult.status, 'complete')
+  assert.equal(zoneIngestResult.producer.kind, 'agent')
+  assert.equal(zoneIngestResult.metrics.files, fixture.inventory.files.length)
+  const acceptedZones = readJson(finalZonesPath)
+  assert.equal(acceptedZones.schemaVersion, 'repo-repository-zones/v2')
+  assert.equal(acceptedZones.review.status, 'accepted')
 })
 
 function createStage6Fixture(t) {
@@ -234,6 +269,62 @@ function buildAcceptedReview({ plan, batch, catalog }) {
     })),
     reviewer: { kind: 'agent', reviewId: 'review:cli-stage6' },
     generatedAt: '2026-07-14T00:00:00Z',
+  }
+}
+
+function buildDomainAgentCatalog({ fixture, plan }) {
+  const evidence = filePath => [{ kind: 'inventory', filePath, claim: 'Agent considered this inventory file together with accepted S6 semantics and graph relations.' }]
+  return {
+    schemaVersion: 'repo-repository-zones/v2',
+    zonePlanId: 'domain-agent:cli-fixture',
+    planId: plan.planId,
+    snapshotId: plan.snapshotId,
+    graphId: plan.graphId,
+    semanticCatalogHash: plan.semanticCatalogHash,
+    status: 'draft',
+    producer: { kind: 'agent', agentId: 'domain-analyzer:cli-fixture', runId: 'run:domain-cli' },
+    zones: [{
+      zoneId: 'fixture-application',
+      label: 'Fixture 应用领域',
+      summary: '承载测试应用及其代码与资源。',
+      rationale: 'Agent 综合文件职责和依赖关系后将该小型 fixture 识别为一个内聚领域。',
+      confidence: 0.9,
+      evidenceRefs: evidence('src/App.vue'),
+      subzones: [{
+        subzoneId: 'application-surface',
+        label: '应用实现',
+        summary: '应用入口、模型、工具、页面外壳与样式。',
+        rationale: 'Fixture 没有足够证据支持进一步拆分。',
+        confidence: 0.86,
+        evidenceRefs: evidence('src/App.vue'),
+      }],
+    }],
+    memberships: fixture.inventory.files.map(file => ({
+      filePath: file.path,
+      zoneId: 'fixture-application',
+      subzoneId: 'application-surface',
+      role: `Fixture member: ${file.path}`,
+      rationale: 'Agent 将该文件归入唯一可证实的应用领域。',
+      confidence: 0.82,
+      status: 'proposed',
+      evidenceRefs: evidence(file.path),
+    })),
+    unknowns: [],
+    generatedAt: '2026-07-15T00:02:00Z',
+  }
+}
+
+function buildDomainAgentReview({ plan, catalog }) {
+  return {
+    schemaVersion: 'repo-repository-zone-review/v1',
+    planId: plan.planId,
+    snapshotId: plan.snapshotId,
+    catalogHash: repositoryZoneCatalogHash(catalog),
+    status: 'accepted',
+    checks: { semanticGrounding: true, graphCoherence: true, completeCoverage: true, singleFileIdentity: true, notPathOnlyClassification: true, noInventedFiles: true },
+    issues: [],
+    reviewer: { kind: 'agent', agentId: 'domain-verifier:cli-fixture', runId: 'review:domain-cli' },
+    generatedAt: '2026-07-15T00:03:00Z',
   }
 }
 

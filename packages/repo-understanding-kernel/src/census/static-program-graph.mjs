@@ -826,7 +826,23 @@ function finalizeGraph(context) {
       eventName: fact.eventName,
       jsxAttribute: fact.eventName,
       handlerName: fact.handlerName || null,
+      elementName: fact.elementName || null,
+      interactionKind: fact.interactionKind || null,
+      visibleText: fact.visibleText || null,
+      componentTag: fact.componentTag === true,
+      componentListener: false,
+      actionSeed: Boolean(fact.interactionKind),
       elementRef: fact.elementRef,
+    }),
+  }))
+  const componentEmitFacts = preferredFacts(context.facts.componentEmits, item => `${item.file}:${item.eventName}:${item.handlerName}:${rangeOffset(item)}`)
+  const componentEmitEntries = componentEmitFacts.map(fact => ({
+    fact,
+    nodeId: addSemanticNode('component-event', fact, fact.eventName, {
+      eventName: fact.eventName,
+      handlerName: fact.handlerName || null,
+      ownerName: fact.ownerName || null,
+      deterministicComponentEvent: true,
     }),
   }))
   const requestFacts = preferredFacts(context.facts.requests, item => `${item.file}:${item.handlerName}:${item.method}:${item.url}:${rangeOffset(item)}`)
@@ -837,6 +853,9 @@ function finalizeGraph(context) {
       method: fact.method,
       url: fact.url || null,
       handlerName: fact.handlerName || null,
+      collaboratorName: fact.collaboratorName || null,
+      collaboratorMethod: fact.collaboratorMethod || null,
+      collaboratorSource: fact.collaboratorSource || null,
       deterministicRequest: true,
     }),
   }))
@@ -1099,7 +1118,49 @@ function finalizeGraph(context) {
     const element = uiElementEntries.find(item => item.fact.file === event.fact.file && item.fact.elementRef === event.fact.elementRef)
     if (element) edges.push(graphEdge('emits-ui-event', element.nodeId, event.nodeId, event.fact, { eventName: event.fact.eventName }))
     const handler = handlerEntries.find(item => item.fact.file === event.fact.file && item.fact.name === event.fact.handlerName)
-    if (handler) edges.push(graphEdge('invokes-handler', event.nodeId, handler.nodeId, event.fact, { handlerName: event.fact.handlerName }))
+    const importedComponent = event.fact.componentTag
+      ? resolveImportedComponent({
+          componentName: event.fact.elementName,
+          sourcePath: event.fact.file,
+          importFacts,
+          resolvedImportTargets,
+          symbolByName,
+          exportFacts,
+        })
+      : null
+    const matchingEmits = importedComponent?.sourcePath
+      ? componentEmitEntries.filter(item => item.fact.file === importedComponent.sourcePath && item.fact.eventName === event.fact.eventName)
+      : []
+    const eventNode = nodes.find(node => node.nodeId === event.nodeId)
+    if (eventNode && matchingEmits.length) {
+      eventNode.attributes.componentListener = true
+      eventNode.attributes.actionSeed = false
+      eventNode.attributes.componentSourcePath = importedComponent.sourcePath
+      for (const matchingEmit of matchingEmits) {
+        edges.push(graphEdge('listens-component-event', matchingEmit.nodeId, event.nodeId, event.fact, {
+          eventName: event.fact.eventName,
+          componentSourcePath: importedComponent.sourcePath,
+        }))
+      }
+    }
+    if (handler) {
+      edges.push(graphEdge('invokes-handler', event.nodeId, handler.nodeId, event.fact, { handlerName: event.fact.handlerName }))
+      if (matchingEmits.length) {
+        edges.push(graphEdge('component-event-handled-by', event.nodeId, handler.nodeId, event.fact, {
+          handlerName: event.fact.handlerName,
+          eventName: event.fact.eventName,
+        }))
+      }
+    }
+  }
+  for (const emission of componentEmitEntries) {
+    const handler = handlerEntries.find(item => item.fact.file === emission.fact.file && item.fact.name === emission.fact.handlerName)
+    if (handler) {
+      edges.push(graphEdge('emits-component-event', handler.nodeId, emission.nodeId, emission.fact, {
+        eventName: emission.fact.eventName,
+        handlerName: emission.fact.handlerName,
+      }))
+    }
   }
   for (const mutation of context.facts.stateMutations) {
     const handler = handlerEntries.find(item => item.fact.file === mutation.file && item.fact.name === mutation.handlerName)
@@ -1126,6 +1187,23 @@ function finalizeGraph(context) {
           deterministicVisibleSignal: true,
         }))
       }
+    }
+  }
+  for (const outcome of outcomeEntries) {
+    const handler = handlerEntries.find(item => item.fact.file === outcome.fact.file && item.fact.name === outcome.fact.handlerName)
+    if (handler) {
+      edges.push(graphEdge('produces-outcome-candidate', handler.nodeId, outcome.nodeId, outcome.fact, {
+        candidateOnly: true,
+        deterministicVisibleSignal: true,
+        signalKind: outcome.fact.signalKind || null,
+      }))
+    }
+    if (outcome.fact.signalKind !== 'navigation' || !outcome.fact.target) continue
+    for (const route of routeEntries.filter(item => item.fact.path === outcome.fact.target)) {
+      edges.push(graphEdge('navigates-to-route', outcome.nodeId, route.nodeId, outcome.fact, {
+        target: outcome.fact.target,
+        deterministicBinding: true,
+      }))
     }
   }
   for (const build of buildEntries) {
@@ -1267,25 +1345,25 @@ function resolveImportedComponent({ componentName, sourcePath, importFacts, reso
     if (!binding) continue
     const resolution = resolvedImportTargets.get(`${imported.file}:${imported.specifier}`)
     if (!resolution || resolution.kind === 'unresolved' || resolution.kind === 'resource') continue
-    if (resolution.kind === 'external') return { nodeId: resolution.nodeId, resolution: 'imported-external' }
+    if (resolution.kind === 'external') return { nodeId: resolution.nodeId, resolution: 'imported-external', sourcePath: null }
     const modulePath = resolution.path
     if (binding.kind === 'named') {
       const symbol = (symbolByName.get(binding.importedName) || []).find(item => item.fact.file === modulePath)
-      if (symbol) return { nodeId: symbol.nodeId, resolution: 'imported-symbol' }
+      if (symbol) return { nodeId: symbol.nodeId, resolution: 'imported-symbol', sourcePath: modulePath }
     } else if (binding.kind === 'default') {
       const explicitDefault = exportFacts.find(item => item.file === modulePath && item.exportedName === 'default')
       const explicitSymbol = explicitDefault
         ? (symbolByName.get(explicitDefault.localName) || []).find(item => item.fact.file === modulePath)
         : null
-      if (explicitSymbol) return { nodeId: explicitSymbol.nodeId, resolution: 'imported-default-symbol' }
+      if (explicitSymbol) return { nodeId: explicitSymbol.nodeId, resolution: 'imported-default-symbol', sourcePath: modulePath }
       const componentSymbol = (symbolByName.get(componentName) || []).find(item => item.fact.file === modulePath)
-      if (componentSymbol) return { nodeId: componentSymbol.nodeId, resolution: 'imported-default-symbol' }
+      if (componentSymbol) return { nodeId: componentSymbol.nodeId, resolution: 'imported-default-symbol', sourcePath: modulePath }
       const stemSymbol = (symbolByName.get(moduleStem(modulePath)) || []).find(item => item.fact.file === modulePath)
-      if (stemSymbol) return { nodeId: stemSymbol.nodeId, resolution: 'imported-default-symbol' }
+      if (stemSymbol) return { nodeId: stemSymbol.nodeId, resolution: 'imported-default-symbol', sourcePath: modulePath }
       const exportedSymbols = [...symbolByName.values()].flat().filter(item => item.fact.file === modulePath && item.fact.exported)
-      if (exportedSymbols.length === 1) return { nodeId: exportedSymbols[0].nodeId, resolution: 'imported-default-symbol' }
+      if (exportedSymbols.length === 1) return { nodeId: exportedSymbols[0].nodeId, resolution: 'imported-default-symbol', sourcePath: modulePath }
     }
-    return { nodeId: resolution.nodeId, resolution: 'imported-module' }
+    return { nodeId: resolution.nodeId, resolution: 'imported-module', sourcePath: modulePath }
   }
   return null
 }
@@ -1659,6 +1737,7 @@ function createFactAccumulator() {
     componentRoles: [],
     uiElements: [],
     uiEvents: [],
+    componentEmits: [],
     handlers: [],
     states: [],
     stateMutations: [],
@@ -1691,6 +1770,7 @@ function emptyParseResult(provider, sourceKind, status) {
     componentRoles: [],
     uiElements: [],
     uiEvents: [],
+    componentEmits: [],
     handlers: [],
     states: [],
     stateMutations: [],
@@ -1750,6 +1830,7 @@ function dedupeParseResult(result) {
   result.componentRoles = preferredFacts(result.componentRoles, item => `${item.role}:${item.name}:${rangeOffset(item)}`)
   result.uiElements = preferredFacts(result.uiElements, item => `${item.ownerName}:${item.elementName}:${rangeOffset(item)}`)
   result.uiEvents = preferredFacts(result.uiEvents, item => `${item.eventName}:${item.handlerName}:${item.elementRef}:${rangeOffset(item)}`)
+  result.componentEmits = preferredFacts(result.componentEmits, item => `${item.eventName}:${item.handlerName}:${rangeOffset(item)}`)
   result.handlers = preferredFacts(result.handlers, item => `${item.name}:${rangeOffset(item)}`)
   result.states = preferredFacts(result.states, item => `${item.ownerName}:${item.stateName}:${rangeOffset(item)}`)
   result.stateMutations = preferredFacts(result.stateMutations, item => `${item.handlerName}:${item.stateName}:${rangeOffset(item)}`)
@@ -1776,7 +1857,7 @@ function preferredFacts(items, keyFor) {
 function parseFactCollections() {
   return [
     'imports', 'symbols', 'exports', 'routes', 'componentRefs', 'bootstraps', 'componentRoles',
-    'uiElements', 'uiEvents', 'handlers', 'states', 'stateMutations', 'requests', 'responses',
+    'uiElements', 'uiEvents', 'componentEmits', 'handlers', 'states', 'stateMutations', 'requests', 'responses',
     'feedbackCandidates', 'outcomeCandidates', 'buildWirings', 'testWirings',
   ]
 }

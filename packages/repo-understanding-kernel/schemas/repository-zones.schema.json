@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-repository-zones/v2",
+  "type": "object",
+  "required": ["schemaVersion", "zonePlanId", "planId", "snapshotId", "graphId", "semanticCatalogHash", "status", "producer", "zones", "memberships", "unknowns", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-repository-zones/v2" },
+    "zonePlanId": { "type": "string", "minLength": 1 },
+    "planId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "graphId": { "type": "string", "minLength": 1 },
+    "semanticCatalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": { "enum": ["draft", "complete"] },
+    "producer": {
+      "type": "object",
+      "required": ["kind", "agentId"],
+      "properties": {
+        "kind": { "const": "agent" },
+        "agentId": { "type": "string", "minLength": 1 },
+        "runId": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "zones": { "type": "array", "minItems": 1 },
+    "memberships": { "type": "array" },
+    "unknowns": { "type": "array" },
+    "crossZoneRelations": { "type": "array" },
+    "review": { "type": "object" },
+    "metrics": { "type": "object" },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}

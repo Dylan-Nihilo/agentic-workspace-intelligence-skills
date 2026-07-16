@@ -1,10 +1,30 @@
 import { createHash } from 'node:crypto'
 
 const REQUEST_STATE_CALLS = new Set(['ref', 'reactive', 'shallowRef', 'shallowReactive'])
+const USER_ACTION_EVENTS = new Set([
+  'blur',
+  'change',
+  'click',
+  'dblclick',
+  'focus',
+  'input',
+  'keydown',
+  'keypress',
+  'keyup',
+  'mousedown',
+  'mouseup',
+  'select',
+  'submit',
+])
 export function scanTypeScriptVueSemantics({ sourcePath, sourceFile, ts }) {
   const facts = emptySemanticFacts()
   const base = node => tsProvenance(sourceFile, node, ts)
   const stateNames = new Set()
+  const apiCollaborators = collectTsApiCollaborators(sourceFile, ts)
+
+  if (/\.vue\.[cm]?[jt]sx?$/i.test(sourcePath)) {
+    collectTsOptionsApiFacts({ sourceFile, ts, facts, base, stateNames, sourcePath })
+  }
 
   const collectState = node => {
     if (/\.vue\.[cm]?[jt]sx?$/i.test(sourcePath) && ts.isFunctionDeclaration(node) && node.name) {
@@ -52,6 +72,23 @@ export function scanTypeScriptVueSemantics({ sourcePath, sourceFile, ts }) {
         const routes = tsObjectProperty(options, 'routes', ts)
         if (routes && ts.isArrayLiteralExpression(routes)) scanVueRouteArray(routes, facts.routes, { ts, sourceFile, base })
       }
+      const ownerName = tsOwnerName(node, ts)
+      if (callee === 'this.$emit') {
+        const eventName = tsString(node.arguments?.[0], ts)
+        if (eventName) {
+          facts.componentEmits.push({
+            ...base(node),
+            eventName,
+            handlerName: ownerName,
+            ownerName: vueComponentName(sourcePath),
+            label: eventName,
+          })
+        }
+      }
+      const request = tsVueApiRequest(node, callee, ownerName, apiCollaborators, ts, base)
+      if (request) facts.requests.push(request)
+      const navigation = tsVueNavigation(node, callee, ownerName, ts, base)
+      if (navigation) facts.outcomeCandidates.push(navigation)
     }
 
     if (ts.isBinaryExpression(node)
@@ -70,6 +107,12 @@ export function scanTypeScriptVueSemantics({ sourcePath, sourceFile, ts }) {
     ts.forEachChild(node, visit)
   }
   visit(sourceFile)
+  facts.responses.push(...facts.requests.map(request => ({
+    ...request,
+    label: `${request.callee} response`,
+    responseName: null,
+    requestRef: request.range?.start?.offset || 0,
+  })))
   return dedupeSemanticFacts(facts)
 }
 
@@ -78,6 +121,11 @@ export function scanBabelVueSemantics({ sourcePath, ast }) {
   const facts = emptySemanticFacts()
   const base = node => babelProvenance(node)
   const stateNames = new Set()
+  const apiCollaborators = collectBabelApiCollaborators(program)
+
+  if (/\.vue\.[cm]?[jt]sx?$/i.test(sourcePath)) {
+    collectBabelOptionsApiFacts({ program, facts, base, stateNames, sourcePath })
+  }
 
   walkBabel(program, null, [], node => {
     if (/\.vue\.[cm]?[jt]sx?$/i.test(sourcePath) && node.type === 'FunctionDeclaration' && node.id?.name) {
@@ -120,6 +168,23 @@ export function scanBabelVueSemantics({ sourcePath, ast }) {
         const routes = babelObjectProperty(node.arguments?.[0], 'routes')
         if (routes?.type === 'ArrayExpression') scanBabelVueRouteArray(routes, facts.routes, base)
       }
+      const ownerName = babelOwnerName(ancestors)
+      if (callee === 'this.$emit') {
+        const eventName = babelString(node.arguments?.[0])
+        if (eventName) {
+          facts.componentEmits.push({
+            ...base(node),
+            eventName,
+            handlerName: ownerName,
+            ownerName: vueComponentName(sourcePath),
+            label: eventName,
+          })
+        }
+      }
+      const request = babelVueApiRequest(node, callee, ownerName, apiCollaborators, base)
+      if (request) facts.requests.push(request)
+      const navigation = babelVueNavigation(node, callee, ownerName, base)
+      if (navigation) facts.outcomeCandidates.push(navigation)
     }
 
     if (node.type === 'AssignmentExpression') {
@@ -134,6 +199,12 @@ export function scanBabelVueSemantics({ sourcePath, ast }) {
       }
     }
   })
+  facts.responses.push(...facts.requests.map(request => ({
+    ...request,
+    label: `${request.callee} response`,
+    responseName: null,
+    requestRef: request.range?.start?.offset || 0,
+  })))
   facts.fileRange = babelRange(program)
   facts.structureFingerprint = babelProvenance(program).structureFingerprint
   return dedupeSemanticFacts(facts)
@@ -188,6 +259,7 @@ export function scanVueSfcSemantics({ sourcePath, source, descriptor, compilerDo
         })
       }
 
+      const visibleText = vueVisibleText(node)
       for (const property of node.props || []) {
         if (property.type !== 7 || property.name !== 'on') continue
         const eventName = staticVueExpression(property.arg)
@@ -199,14 +271,17 @@ export function scanVueSfcSemantics({ sourcePath, source, descriptor, compilerDo
           handlerName,
           inlineHandler: null,
           ownerName: componentName,
+          elementName: node.tag,
+          componentTag: node.tagType === 1 || componentTag(node.tag),
+          interactionKind: USER_ACTION_EVENTS.has(eventName.toLowerCase()) ? eventName.toLowerCase() : null,
+          visibleText: visibleText || null,
           elementRef,
-          label: eventName,
+          label: visibleText ? `${eventName}: ${visibleText}` : eventName,
         })
       }
 
       const feedbackKind = vueFeedbackKind(node)
       const dependsOnStates = vueDependencies(node)
-      const visibleText = vueVisibleText(node)
       if (feedbackKind) {
         facts.feedbackCandidates.push({
           ...provenance,
@@ -304,8 +379,13 @@ function tsObjectProperty(node, name, ts) {
 
 function tsCalleeName(node, ts) {
   if (!node) return ''
+  if (node.kind === ts.SyntaxKind.ThisKeyword) return 'this'
   if (ts.isIdentifier(node)) return node.text
   if (ts.isPropertyAccessExpression(node)) return `${tsCalleeName(node.expression, ts)}.${node.name.text}`
+  if (ts.isElementAccessExpression?.(node)) {
+    const property = tsString(node.argumentExpression, ts)
+    return property ? `${tsCalleeName(node.expression, ts)}.${property}` : tsCalleeName(node.expression, ts)
+  }
   if (ts.isCallExpression(node)) return tsCalleeName(node.expression, ts)
   return ''
 }
@@ -341,16 +421,22 @@ function tsPropertyName(node) {
 }
 
 function vueStateTarget(node, ts) {
-  if (!ts.isPropertyAccessExpression(node) || node.name.text !== 'value') return null
-  return ts.isIdentifier(node.expression) ? node.expression.text : null
+  if (!ts.isPropertyAccessExpression(node)) return null
+  if (node.name.text === 'value' && ts.isIdentifier(node.expression)) return node.expression.text
+  if (node.expression?.kind === ts.SyntaxKind.ThisKeyword) return node.name.text
+  return null
 }
 
 function tsOwnerName(node, ts) {
   let current = node
   while (current) {
     if (ts.isFunctionDeclaration(current) && current.name) return current.name.text
+    if (ts.isMethodDeclaration?.(current) && current.name) return tsPropertyName(current.name)
     if ((ts.isArrowFunction(current) || ts.isFunctionExpression(current)) && ts.isVariableDeclaration(current.parent) && ts.isIdentifier(current.parent.name)) {
       return current.parent.name.text
+    }
+    if ((ts.isArrowFunction(current) || ts.isFunctionExpression(current)) && ts.isPropertyAssignment?.(current.parent)) {
+      return tsPropertyName(current.parent.name)
     }
     current = current.parent
   }
@@ -367,6 +453,7 @@ function findBabelNamedCall(node, name) {
 
 function babelCalleeName(node) {
   if (!node) return ''
+  if (node.type === 'ThisExpression') return 'this'
   if (node.type === 'Identifier') return node.name
   if (node.type === 'CallExpression') return babelCalleeName(node.callee)
   if (node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression') {
@@ -410,20 +497,233 @@ function babelDynamicImportSpecifiers(node) {
 
 function babelVueStateTarget(node) {
   if (!['MemberExpression', 'OptionalMemberExpression'].includes(node?.type)) return null
-  if ((node.property?.name || node.property?.value) !== 'value') return null
-  return node.object?.type === 'Identifier' ? node.object.name : null
+  const property = node.property?.name || node.property?.value
+  if (property === 'value' && node.object?.type === 'Identifier') return node.object.name
+  if (node.object?.type === 'ThisExpression') return property || null
+  return null
 }
 
 function babelOwnerName(ancestors) {
   for (let index = (ancestors || []).length - 1; index >= 0; index -= 1) {
     const node = ancestors[index]
     if (node.type === 'FunctionDeclaration' && node.id?.name) return node.id.name
+    if (node.type === 'ObjectMethod') return node.key?.name || node.key?.value || null
     if (['ArrowFunctionExpression', 'FunctionExpression'].includes(node.type)) {
       const parent = ancestors[index - 1]
       if (parent?.type === 'VariableDeclarator' && parent.id?.name) return parent.id.name
+      if (['ObjectProperty', 'Property'].includes(parent?.type)) return parent.key?.name || parent.key?.value || null
     }
   }
   return null
+}
+
+function collectTsOptionsApiFacts({ sourceFile, ts, facts, base, stateNames, sourcePath }) {
+  for (const options of tsVueOptionsObjects(sourceFile, ts)) {
+    const methods = tsObjectProperty(options, 'methods', ts)
+    if (methods && ts.isObjectLiteralExpression(methods)) {
+      for (const property of methods.properties || []) {
+        const name = tsPropertyName(property.name)
+        if (!name) continue
+        if (ts.isMethodDeclaration?.(property)) {
+          facts.handlers.push({ ...base(property), name, label: name })
+        } else if (ts.isPropertyAssignment(property)
+          && (ts.isFunctionExpression(property.initializer) || ts.isArrowFunction(property.initializer))) {
+          facts.handlers.push({ ...base(property), name, label: name })
+        }
+      }
+    }
+    const data = (options.properties || []).find(property => tsPropertyName(property.name) === 'data')
+    const body = tsFunctionBody(data, ts)
+    if (!body) continue
+    const visit = node => {
+      if (ts.isReturnStatement(node) && ts.isObjectLiteralExpression(node.expression)) {
+        for (const property of node.expression.properties || []) {
+          const stateName = tsPropertyName(property.name)
+          if (!stateName || stateNames.has(stateName)) continue
+          stateNames.add(stateName)
+          facts.states.push({
+            ...base(property),
+            stateName,
+            setterName: `this.${stateName}`,
+            ownerName: vueComponentName(sourcePath),
+            label: stateName,
+          })
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(body)
+  }
+}
+
+function tsVueOptionsObjects(sourceFile, ts) {
+  const result = []
+  const visit = node => {
+    if (ts.isExportAssignment(node) && ts.isObjectLiteralExpression(node.expression)) result.push(node.expression)
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return result
+}
+
+function tsFunctionBody(property, ts) {
+  if (!property) return null
+  if (ts.isMethodDeclaration?.(property)) return property.body || null
+  if (ts.isPropertyAssignment(property)
+    && (ts.isFunctionExpression(property.initializer) || ts.isArrowFunction(property.initializer))) {
+    return property.initializer.body || null
+  }
+  return null
+}
+
+function collectBabelOptionsApiFacts({ program, facts, base, stateNames, sourcePath }) {
+  for (const options of babelVueOptionsObjects(program)) {
+    const methods = babelObjectProperty(options, 'methods')
+    if (methods?.type === 'ObjectExpression') {
+      for (const property of methods.properties || []) {
+        const name = property.key?.name || property.key?.value
+        if (!name) continue
+        if (property.type === 'ObjectMethod'
+          || (['ObjectProperty', 'Property'].includes(property.type)
+            && ['FunctionExpression', 'ArrowFunctionExpression'].includes(property.value?.type))) {
+          facts.handlers.push({ ...base(property), name, label: name })
+        }
+      }
+    }
+    const data = (options.properties || []).find(property => (property.key?.name || property.key?.value) === 'data')
+    const body = data?.type === 'ObjectMethod' ? data.body : data?.value?.body
+    if (!body) continue
+    walkBabel(body, null, [], node => {
+      if (node.type !== 'ReturnStatement' || node.argument?.type !== 'ObjectExpression') return
+      for (const property of node.argument.properties || []) {
+        const stateName = property.key?.name || property.key?.value
+        if (!stateName || stateNames.has(stateName)) continue
+        stateNames.add(stateName)
+        facts.states.push({
+          ...base(property),
+          stateName,
+          setterName: `this.${stateName}`,
+          ownerName: vueComponentName(sourcePath),
+          label: stateName,
+        })
+      }
+    })
+  }
+}
+
+function babelVueOptionsObjects(program) {
+  const result = []
+  walkBabel(program, null, [], node => {
+    if (node.type === 'ExportDefaultDeclaration' && node.declaration?.type === 'ObjectExpression') result.push(node.declaration)
+  })
+  return result
+}
+
+function collectTsApiCollaborators(sourceFile, ts) {
+  const result = new Map()
+  for (const statement of sourceFile.statements || []) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) continue
+    const specifier = statement.moduleSpecifier.text
+    if (!apiCollaboratorSpecifier(specifier)) continue
+    const clause = statement.importClause
+    if (clause?.name) result.set(clause.name.text, specifier)
+    if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+      for (const element of clause.namedBindings.elements || []) result.set(element.name.text, specifier)
+    }
+    if (clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings)) result.set(clause.namedBindings.name.text, specifier)
+  }
+  return result
+}
+
+function collectBabelApiCollaborators(program) {
+  const result = new Map()
+  walkBabel(program, null, [], node => {
+    if (node.type !== 'ImportDeclaration' || !apiCollaboratorSpecifier(node.source?.value)) return
+    for (const specifier of node.specifiers || []) {
+      if (specifier.local?.name) result.set(specifier.local.name, node.source.value)
+    }
+  })
+  return result
+}
+
+function apiCollaboratorSpecifier(specifier) {
+  return /(?:^|[/_-])(?:api|apis|service|services|client|clients)(?:[/_.-]|$)/i.test(String(specifier || ''))
+}
+
+function tsVueApiRequest(node, callee, handlerName, collaborators, ts, base) {
+  const segments = String(callee || '').split('.')
+  if (segments.length !== 2) return null
+  const [root, method] = segments
+  if (!root || !method || !collaborators.has(root)) return null
+  return {
+    ...base(node),
+    label: `CALL ${callee}`,
+    callee,
+    url: null,
+    method: 'CALL',
+    handlerName,
+    collaboratorName: root,
+    collaboratorMethod: method,
+    collaboratorSource: collaborators.get(root),
+  }
+}
+
+function babelVueApiRequest(node, callee, handlerName, collaborators, base) {
+  const segments = String(callee || '').split('.')
+  if (segments.length !== 2) return null
+  const [root, method] = segments
+  if (!root || !method || !collaborators.has(root)) return null
+  return {
+    ...base(node),
+    label: `CALL ${callee}`,
+    callee,
+    url: null,
+    method: 'CALL',
+    handlerName,
+    collaboratorName: root,
+    collaboratorMethod: method,
+    collaboratorSource: collaborators.get(root),
+  }
+}
+
+function tsVueNavigation(node, callee, handlerName, ts, base) {
+  if (!['this.$router.push', 'this.$router.replace', 'router.push', 'router.replace'].includes(callee)) return null
+  const target = tsNavigationTarget(node.arguments?.[0], ts)
+  return {
+    ...base(node),
+    label: target ? `Navigation to ${target}` : `${callee} navigation`,
+    signalKind: 'navigation',
+    target,
+    handlerName,
+    candidateOnly: true,
+    deterministicVisibleSignal: true,
+  }
+}
+
+function babelVueNavigation(node, callee, handlerName, base) {
+  if (!['this.$router.push', 'this.$router.replace', 'router.push', 'router.replace'].includes(callee)) return null
+  const target = babelNavigationTarget(node.arguments?.[0])
+  return {
+    ...base(node),
+    label: target ? `Navigation to ${target}` : `${callee} navigation`,
+    signalKind: 'navigation',
+    target,
+    handlerName,
+    candidateOnly: true,
+    deterministicVisibleSignal: true,
+  }
+}
+
+function tsNavigationTarget(node, ts) {
+  const direct = tsString(node, ts)
+  if (direct) return direct
+  return tsString(tsObjectProperty(node, 'path', ts), ts)
+}
+
+function babelNavigationTarget(node) {
+  const direct = babelString(node)
+  if (direct) return direct
+  return babelString(babelObjectProperty(node, 'path'))
 }
 
 function tsProvenance(sourceFile, node, ts) {
@@ -564,7 +864,8 @@ function staticVueExpression(node) {
 
 function staticHandlerName(node) {
   const value = typeof node?.content === 'string' ? node.content.trim() : ''
-  return /^[A-Za-z_$][\w$]*$/.test(value) ? value : null
+  const match = value.match(/^([A-Za-z_$][\w$]*)(?:\s*\(|$)/)
+  return match?.[1] || null
 }
 
 function staticVueAttribute(node, name) {
@@ -631,6 +932,7 @@ function emptySemanticFacts() {
     componentRefs: [],
     uiElements: [],
     uiEvents: [],
+    componentEmits: [],
     handlers: [],
     states: [],
     stateMutations: [],

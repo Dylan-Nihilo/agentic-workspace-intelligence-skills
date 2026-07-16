@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-repository-zone-agent-plan/v1",
+  "type": "object",
+  "required": ["schemaVersion", "planId", "graphId", "snapshotId", "semanticCatalogHash", "repoPath", "allowedFiles", "artifactRefs", "constraints", "agentRole", "reviewerRole", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-repository-zone-agent-plan/v1" },
+    "planId": { "type": "string", "minLength": 1 },
+    "graphId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "semanticCatalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "repoPath": { "type": "string", "minLength": 1 },
+    "allowedFiles": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "artifactRefs": { "type": "object" },
+    "constraints": {
+      "type": "object",
+      "required": ["authority", "coverage", "sharedFileIdentity", "domainNaming", "maxZones", "maxSubzones"],
+      "properties": {
+        "authority": { "const": "agent-only" },
+        "coverage": { "const": "all-inventory-files-exactly-once" },
+        "sharedFileIdentity": { "const": "single-membership" },
+        "domainNaming": { "const": "agent-derived" },
+        "maxZones": { "type": "integer", "minimum": 1 },
+        "maxSubzones": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "agentRole": { "const": "repo-domain-analyzer" },
+    "reviewerRole": { "const": "repo-domain-verifier" },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

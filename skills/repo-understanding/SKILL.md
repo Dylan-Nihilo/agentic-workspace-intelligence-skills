@@ -17,14 +17,15 @@ description: >-
 5. 把 parser failure、unresolved import、protected access、unsupported syntax 和静态绑定失败写入 `deterministicDiagnostics`。不得为它们创建 agent 任务。
    源码解析优先复用官方 compiler/parser provider：Vue SFC 用 `@vue/compiler-sfc`，template 用 `@vue/compiler-dom`，script 按语言交给 TypeScript 或 Babel；adapter 只归一化 fact 与跨 AST 绑定，禁止按仓库名、目录名或业务路由写特判。
 6. 只为 `semantic-ambiguity` 规划 agent 工作。把 `runtime-external-blocked` 留作 runtime limitation；把 `product-intent` 交给用户或产品资料，不派 repo explorer。
-7. Stage 7 及以后每次 governed agent 调用必须绑定 `repo-research-contract/v1` 与 `repo-work-item/v3`。Stage 6 只接受 `repo-node-semantic-batch-plan/v1` 中带 batchId、allowedFiles、source fingerprints 与唯一 outputRef 的批次；拒绝自由文本 objective。
+7. Stage 7 Domain Zoning 的领域命名、子领域发现和文件归属只能由 `repo-domain-analyzer` Agent 产生。确定性 planner 只生成上下文与约束，禁止使用路径正则、目录映射、固定领域列表或依赖阈值直接分类。另一个 `repo-domain-verifier` Agent 必须审核精确 catalog hash；只有 `zone-ingest` 可以接纳结果。
 8. 在全部已派发 WorkItem 到达 accepted/waived 或显式失败策略终态前保持下游 Join。`result-produced` 可以按 manifest 顺序串行 ingest；Join 关闭前不得 synthesize 或 project。
 9. 只由编排者持锁串行 ingest。Worker 不得修改 Claim、Question、Journey、Map、run state 或 event log。
 10. 把 `repo-work-result/v3.status=completed` 视为 transport 完成，不视为研究完成。只有 `repo-task-outcome/v1.status=satisfied` 且 acceptance criteria 全部满足才关闭 contract。
 11. 进入 Map projection、synthesis 或 HTML 前必须满足 Journey Set closure gate：所有 critical Journey closed，且 `journeyClosureRate >= minimumJourneyClosureRate`。当前 CLI 默认 `minimumJourneyClosureRate=1`，即所有 governed Journey 都必须 closed。
 12. `repository-atlas.html` 是 deterministic 阶段产物，不属于 Product Map 或最终 human-readable projection。Static Program Graph 生成后即可发布，并在 planning、WorkItem、Journey、projection、synthesis 与 verify 状态变化后刷新；不得让 Journey closure 阻止代码全貌可视化。
 13. Static Program Graph 后必须先完成 Node Semantic Catalog。Stage 5 只按 inventory、community、源码体积和指纹生成有界批次，不生成模板问题；Stage 6 只解释单个文件节点，不生成 Journey、业务路径或 API 参数表。
-14. `store/node-semantics.json.status=complete` 且 eligible 文件全部为 `accepted` 前，不得进入 Stage 7 Journey Exploration。Worker 只写 batch result；另一个独立 `repo-fact-verifier` Agent 必须对精确 catalog hash 生成 accepted review；编排者才可用 `semantic-ingest` 串行接纳。
+14. `store/node-semantics.json.status=complete` 且 eligible 文件全部为 `accepted` 前，不得进入 Stage 7 Semantic Zoning。Worker 只写 batch result；另一个独立 `repo-fact-verifier` Agent 必须对精确 catalog hash 生成 accepted review；编排者才可用 `semantic-ingest` 串行接纳。
+15. Stage 7 先运行 `zone-plan` 生成 `repo-repository-zone-agent-plan/v1` 与 Agent context；该计划不得包含 `zones` 或 `memberships`。Agent 草稿必须是 `repo-repository-zones/v2`，覆盖每个 inventory 文件且保留共享文件的单一身份。目录名只能作为 Agent 的辅助证据，不得单独决定领域。缺少 Agent 结果、独立审核或任一门禁时，Stage 7 保持 active，不得生成权威 `planning/repository-zones.json`。
 
 ## 固定流程
 
@@ -41,6 +42,12 @@ snapshot
 → independent node semantic review
 → serial node semantic acceptance
 → complete Node Semantic Catalog
+→ repository Domain Agent context（无预分类）
+→ Domain Agent 发现领域、子领域与文件归属
+→ independent Domain Agent review
+→ serial domain catalog acceptance
+→ repository atlas Stage 7（保持 S6 自上而下的树形骨架，并用动态语义底色聚拢当前可见节点）
+→ optional governed Journey research（仅在另行进入后续研究时）
 → research contracts
 → WorkItem fan-out
 → serial ingest while Join remains open
@@ -65,7 +72,7 @@ snapshot
 4. Investigation Frame → investigation frame、Journey candidates
 5. Semantic Planning → `planning/node-semantic-batches.json`、bounded Agent contexts
 6. Node Semantics → `store/node-semantics.json`、文件职责/输入/动作/状态/输出/边界
-7. Journey Exploration → 基于静态图与 accepted node semantics 的 ResearchContracts、JourneyDefinition/Binding
+7. Agent Domain Zoning → Agent plan/context、Agent 草稿、独立审核、`planning/repository-zones.json`
 8. Product Maps → Application、Experience、Runtime Flow、Change Map
 9. Synthesis → evidence-grounded narrative
 10. Human-readable → final delivery HTML
@@ -79,7 +86,7 @@ npm run --silent understanding:harness -- atlas \
   --out <package-dir>/repository-atlas.html
 ```
 
-Repository Atlas 必须延续最终 HTML 的视觉语言，并至少包含：可切换的阶段轨道及阶段增量、VSCode 式文件树、按文件类型区分的 icon、自上而下的文件级依赖流、上下游切换、逐级展开且不设置总层级上限、每次展开的同层数量上限、循环与重复节点标记、搜索与文件检查器、确定性诊断覆盖层。阶段切换必须只展示该阶段已经产生的真实能力和数据；不得用最终产物冒充历史快照。依赖流默认只展开根节点的一层关系，不得直接把全部 symbol、UI element 与 AST 节点平铺成不可读的全量力导图。
+Repository Atlas 必须延续最终 HTML 的视觉语言，并至少包含：可切换的阶段轨道及阶段增量、VSCode 式文件树、按文件类型区分的 icon、自上而下的文件级依赖流、上下游切换、逐级展开且不设置总层级上限、每次展开的同层数量上限、循环与重复节点标记、搜索与文件检查器、确定性诊断覆盖层。Stage 7 必须继续使用 S6 的自上而下树形骨架、文件卡、节点 identity、语义、依赖边、检查器以及同一份展开状态；S7 的可见文件集合必须与 S6 当前展开结果一致，禁止预先渲染全仓库。Stage 7 可以在同层已选中的可见子节点内按区域稳定聚拢，但不得改变同层数量上限选中的文件集合。区域使用贴合当前树枝的非矩形、低对比度语义底色和节点区域标记表达；展开或收起任一卡片时，底色区域必须随可见节点实时生成、扩展、收缩或消失。不得使用包裹卡片的矩形区域框，不得再造区域导航卡或另起一张风格不同的图。阶段切换必须只展示该阶段已经产生的真实能力和数据；不得用最终产物冒充历史快照。依赖流默认只展开根节点的一层关系，不得直接把全部 symbol、UI element 与 AST 节点平铺成不可读的全量力导图。
 
 所有 CLI 命令从本仓库根目录执行：
 
@@ -103,7 +110,9 @@ npm run --silent understanding:harness -- status \
 之后每次只根据最新 `status.nextAction` 执行一个分支，再重新运行 `status`：
 
 - Static Program Graph 建好后先运行 `npm run --silent understanding:harness -- semantic-plan --package <package-dir>`。Host 按 `research/node-semantics/contexts/batch-*.json` 调度 `repo-explorer` 的 `node-semantic-enrichment` 模式。
-- Batch result 返回后先运行 `npm run --silent understanding:harness -- semantic-review-plan --package <package-dir>`，生成绑定精确 catalog hash 的 typed review dispatch。由未生成该 catalog 的 `repo-fact-verifier` 重开源码，写入 `research/node-semantics/reviews/batch-*.review.json`。随后运行 `npm run --silent understanding:harness -- semantic-ingest --package <package-dir>`；`unreviewedBatches` 或 `changesRequestedBatches` 非空时不得提升为 accepted。只有返回 `complete` 才能进入下列 Journey/ResearchContract 状态循环。
+- Batch result 返回后先运行 `npm run --silent understanding:harness -- semantic-review-plan --package <package-dir>`，生成绑定精确 catalog hash 的 typed review dispatch。由未生成该 catalog 的 `repo-fact-verifier` 重开源码，写入 `research/node-semantics/reviews/batch-*.review.json`。随后运行 `npm run --silent understanding:harness -- semantic-ingest --package <package-dir>`；`unreviewedBatches` 或 `changesRequestedBatches` 非空时不得提升为 accepted。只有返回 `complete` 才能进入 Stage 7。
+- Node Semantic Catalog complete 后运行 `npm run --silent understanding:harness -- zone-plan --package <package-dir>`。该命令只生成 `planning/repository-zone-agent-plan.json` 与 `research/repository-zones/context.json`，状态应为 `waiting-for-agent`，不得出现静态分类结果。
+- Host 将 context 派给 `repo-domain-analyzer`，写入 `research/repository-zones/result.json`。随后运行 `zone-review-plan`，由不同的 `repo-domain-verifier` 写入 `research/repository-zones/review.json`。最后运行 `zone-ingest`；只有审核为 accepted 且覆盖率、证据、单一身份、非纯路径分类全部通过时，才生成权威 `planning/repository-zones.json` 并刷新 Atlas。
 
 - `dispatch`：运行 `npm run --silent understanding:harness -- dispatch --package <package-dir>`，由 host 执行 manifest 中的 WorkItem。
 - `await-results`：等待 worker 写完 TaskOutcome/WorkResult，不运行下游命令。
@@ -154,9 +163,45 @@ npm run --silent understanding:harness -- status \
 
 InvestigationFrame 仅由 deterministic kernel 生成，不派任何独立 worker。需要语义判断的歧义必须进入 ResearchContract，不得把确定性诊断包装成 agent 任务。
 
-### 4. 编译 ResearchContract
+### 4. 生成 Agent Domain Zoning
 
-先确认 `store/node-semantics.json.status=complete`。本节属于 Stage 7 Journey Exploration；不得复用旧模板问题代替根据静态图与已接纳节点语义形成的真实语义歧义。
+先确认 `store/node-semantics.json.status=complete` 且所有条目为 `accepted`。本节属于 Stage 7 Domain Zoning，不创建模板问题、Journey 或静态分类表。
+
+运行：
+
+```bash
+npm run --silent understanding:harness -- zone-plan \
+  --package <package-dir>
+```
+
+确定性 planner 只输出：
+
+- inventory 的完整文件清单；
+- 已接纳的 S6 文件职责、输入、动作、状态、输出、边界和证据；
+- Static Program Graph 的文件关系与 community；
+- 精确 snapshot/catalog hash、允许文件和输出路径；
+- 全覆盖、单一身份、禁止虚构、最大领域数量等门禁。
+
+Planner 不得输出领域名称、预置分类、membership 建议或路径匹配结果。`repo-domain-analyzer` 必须综合职责语义和代码关系，自行提出适合该仓库的领域和子领域。目录结构只能作为辅助证据；只按目录名归类的结果必须被 verifier 拒绝。
+
+Agent 写入 `research/repository-zones/result.json` 后运行：
+
+```bash
+npm run --silent understanding:harness -- zone-review-plan \
+  --package <package-dir>
+npm run --silent understanding:harness -- zone-ingest \
+  --package <package-dir>
+```
+
+Verifier 必须是不同 Agent，并检查语义证据、图关系内聚性、完整覆盖、共享文件单一身份、非纯路径分类和无虚构文件。`zone-ingest` 只做校验、计算跨领域关系和落库，不得改写 Agent 的领域结论。
+
+Atlas 只改变同层排布和语义底色，不改变树形层级、文件 identity、Static Program Graph edge、S6 semantic 或展开状态。S7 每次渲染都从 S6 当前的 root、方向、关系筛选、`expandedNodes` 与同层数量上限重新计算可见文件；只为当前可见文件计算非矩形语义区域。点文件卡仍回到同一检查器和依赖关系。
+
+### 4b. 可选的后续 Journey 研究
+
+Stage 7 交付后默认停止。只有用户明确要求继续研究 Journey 时，才进入下述 governed ResearchContract / WorkItem 流程。Stage 7 不生成行为路径候选，也不保留旧实验兼容入口；不得把 Journey 研究产物回填成领域划分依据。
+
+后续 Journey 研究从 InvestigationFrame、Static Program Graph、已接纳 Claim 和产品输入中限定问题。结构边只证明代码连接；用户角色、业务目标、分支含义和结果仍需源码、运行时或产品证据。
 
 把合格的 `semantic-ambiguity` 编译为 `repo-research-contract/v1`。每个 contract 必须包含：
 
@@ -183,7 +228,7 @@ InvestigationFrame 仅由 deterministic kernel 生成，不派任何独立 worke
 
 让 worker 只写 `outputArtifactPath` 与 WorkResult 路径。要求 WorkResult v3 填写 `contractId`、`outcomeStatus`、`readSet`、`artifactHashes`、`scopeViolations` 和 `usage.status=reported|unavailable`；不得估算 usage。
 
-本节是 Stage 7 及以后使用的 governed WorkItem。Stage 6 node-semantic worker 使用 `planning/node-semantic-batches.json` 中的 batch identity 和唯一 outputRef，并由 `semantic-ingest` 的专用门禁验收，不得伪装成 Journey ResearchContract。
+本节只用于 Stage 7 交付之后、用户明确要求的 governed Journey 研究。Stage 6 node-semantic worker 使用 `planning/node-semantic-batches.json` 中的 batch identity 和唯一 outputRef，并由 `semantic-ingest` 验收；Stage 7 使用独立的 Domain Agent plan/review/ingest 契约，不复用 Journey WorkItem。
 
 ### 6. 执行 Join
 

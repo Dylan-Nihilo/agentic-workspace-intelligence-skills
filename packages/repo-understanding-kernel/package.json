@@ -20,6 +20,7 @@
     "./journey-closure": "./src/planning/journey-closure.mjs",
     "./node-semantic-planning": "./src/planning/node-semantic-batch-planner.mjs",
     "./research-planning": "./src/planning/research-contract-planner.mjs",
+    "./repository-zoning": "./src/planning/repository-zones.mjs",
     "./task-outcome": "./src/validation/task-outcome-validator.mjs",
     "./synthesis-narrative": "./src/validation/synthesis-narrative-validator.mjs",
     "./product-maps": "./src/projections/product-maps.mjs",

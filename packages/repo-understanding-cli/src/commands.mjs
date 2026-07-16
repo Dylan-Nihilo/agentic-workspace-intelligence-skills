@@ -68,6 +68,17 @@ import {
   buildNodeSemanticBatchPlan,
   writeNodeSemanticBatchPlan,
 } from '../../repo-understanding-kernel/src/planning/node-semantic-batch-planner.mjs'
+import {
+  acceptRepositoryZoneCatalog,
+  buildRepositoryZoneAgentContext,
+  buildRepositoryZoneAgentPlan,
+  repositoryZoneCatalogHash,
+  validateRepositoryZoneDraft,
+  validateRepositoryZoneReview,
+  writeRepositoryZoneAgentContext,
+  writeRepositoryZoneAgentPlan,
+  writeRepositoryZones,
+} from '../../repo-understanding-kernel/src/planning/repository-zones.mjs'
 import { buildNodeSemanticContext } from '../../repo-understanding-kernel/src/knowledge/node-semantic-context.mjs'
 import {
   acceptNodeSemanticBatchCatalog,
@@ -114,6 +125,9 @@ function usage(exitCode = 1) {
   harness report --package /path/to/package [--out /path/to/report.md]
   harness atlas --package /path/to/package [--out /path/to/repository-atlas.html]
   harness semantic-plan --package /path/to/package [--max-files 8] [--max-source-bytes 262144]
+  harness zone-plan --package /path/to/package [--max-zones 24] [--max-subzones 96]
+  harness zone-review-plan --package /path/to/package
+  harness zone-ingest --package /path/to/package
   harness semantic-review-plan --package /path/to/package
   harness semantic-ingest --package /path/to/package
   harness html --package /path/to/package [--out /path/to/human-readable.html]
@@ -141,6 +155,9 @@ async function main() {
   if (command === 'report') return report(argv)
   if (command === 'atlas') return atlas(argv)
   if (command === 'semantic-plan') return semanticPlan(argv)
+  if (command === 'zone-plan') return zonePlan(argv)
+  if (command === 'zone-review-plan') return zoneReviewPlan(argv)
+  if (command === 'zone-ingest') return zoneIngest(argv)
   if (command === 'semantic-review-plan') return semanticReviewPlan(argv)
   if (command === 'semantic-ingest') return semanticIngest(argv)
   if (command === 'html') return html(argv)
@@ -1082,6 +1099,125 @@ function atlas(argv) {
     outFile: args.out ? path.resolve(args.out) : undefined,
   })
   console.log(JSON.stringify(result, null, 2))
+}
+
+function zonePlan(argv) {
+  const args = parseArgs(argv, ['package'])
+  const packageDir = path.resolve(args.package)
+  const inventory = readJson(path.join(packageDir, 'static', 'inventory.json'))
+  const staticProgramGraph = readJson(path.join(packageDir, 'static', 'static-program-graph.json'))
+  const nodeSemanticCatalog = readJson(path.join(packageDir, 'store', 'node-semantics.json'))
+  const communityMap = readJsonIfExists(path.join(packageDir, 'static', 'community-map.json'))
+  const plan = buildRepositoryZoneAgentPlan({
+    inventory,
+    staticProgramGraph,
+    nodeSemanticCatalog,
+    repoPath: inventory.repo?.path,
+    maxZones: args['max-zones'] ? Number(args['max-zones']) : 24,
+    maxSubzones: args['max-subzones'] ? Number(args['max-subzones']) : 96,
+  })
+  const planPath = writeRepositoryZoneAgentPlan({ packageDir, plan, inventory, staticProgramGraph, nodeSemanticCatalog })
+  const context = buildRepositoryZoneAgentContext({ plan, inventory, staticProgramGraph, nodeSemanticCatalog, communityMap })
+  const contextPath = writeRepositoryZoneAgentContext({ packageDir, context, outputPath: plan.artifactRefs.contextRef })
+  removeStaleRepositoryZoneArtifacts(packageDir, plan)
+  const repositoryAtlas = generateRepositoryAtlasHtml({ packageDir }).output
+  console.log(JSON.stringify({
+    schemaVersion: 'repo-repository-zone-agent-plan-result/v1',
+    planId: plan.planId,
+    status: 'waiting-for-agent',
+    authority: plan.constraints.authority,
+    allowedFiles: plan.allowedFiles.length,
+    planPath,
+    contextPath,
+    outputPath: path.resolve(packageDir, plan.artifactRefs.outputRef),
+    reviewPath: path.resolve(packageDir, plan.artifactRefs.reviewRef),
+    resultSchemaPath: path.join(KERNEL_DIR, 'schemas', 'repository-zones.schema.json'),
+    repositoryAtlas,
+  }, null, 2))
+}
+
+function zoneReviewPlan(argv) {
+  const args = parseArgs(argv, ['package'])
+  const packageDir = path.resolve(args.package)
+  const inventory = readJson(path.join(packageDir, 'static', 'inventory.json'))
+  const staticProgramGraph = readJson(path.join(packageDir, 'static', 'static-program-graph.json'))
+  const plan = readJson(path.join(packageDir, 'planning', 'repository-zone-agent-plan.json'))
+  const catalogPath = path.resolve(packageDir, plan.artifactRefs.outputRef)
+  const catalog = readJson(catalogPath)
+  const issues = validateRepositoryZoneDraft({ catalog, plan, inventory, staticProgramGraph })
+  if (issues.length) throw new Error(`Invalid Repository Zone Agent draft:\n- ${issues.join('\n- ')}`)
+  const reviewPath = path.resolve(packageDir, plan.artifactRefs.reviewRef)
+  const dispatchPath = path.join(packageDir, 'research', 'repository-zones', 'review-dispatch.json')
+  const catalogHash = repositoryZoneCatalogHash(catalog)
+  removeStaleRepositoryZoneReview(packageDir, plan, catalogHash)
+  const dispatch = {
+    schemaVersion: 'repo-repository-zone-review-dispatch/v1',
+    planId: plan.planId,
+    snapshotId: plan.snapshotId,
+    reviewerRole: plan.reviewerRole,
+    producerAgentId: catalog.producer.agentId,
+    catalogPath,
+    catalogHash,
+    contextPath: path.resolve(packageDir, plan.artifactRefs.contextRef),
+    reviewPath,
+    reviewSchemaPath: path.join(KERNEL_DIR, 'schemas', 'repository-zone-review.schema.json'),
+    requiredChecks: ['semanticGrounding', 'graphCoherence', 'completeCoverage', 'singleFileIdentity', 'notPathOnlyClassification', 'noInventedFiles'],
+  }
+  ensureDir(path.dirname(dispatchPath))
+  fs.writeFileSync(dispatchPath, `${JSON.stringify(dispatch, null, 2)}\n`, 'utf8')
+  const repositoryAtlas = generateRepositoryAtlasHtml({ packageDir }).output
+  console.log(JSON.stringify({
+    schemaVersion: 'repo-repository-zone-review-plan-result/v1',
+    planId: plan.planId,
+    catalogHash: dispatch.catalogHash,
+    dispatchPath,
+    reviewPath,
+    repositoryAtlas,
+  }, null, 2))
+}
+
+function zoneIngest(argv) {
+  const args = parseArgs(argv, ['package'])
+  const packageDir = path.resolve(args.package)
+  const inventory = readJson(path.join(packageDir, 'static', 'inventory.json'))
+  const staticProgramGraph = readJson(path.join(packageDir, 'static', 'static-program-graph.json'))
+  const plan = readJson(path.join(packageDir, 'planning', 'repository-zone-agent-plan.json'))
+  const catalog = readJson(path.resolve(packageDir, plan.artifactRefs.outputRef))
+  const review = readJson(path.resolve(packageDir, plan.artifactRefs.reviewRef))
+  const reviewIssues = validateRepositoryZoneReview({ review, plan, catalog })
+  if (reviewIssues.length) throw new Error(`Invalid Repository Zone Agent review:\n- ${reviewIssues.join('\n- ')}`)
+  const zones = acceptRepositoryZoneCatalog({ catalog, review, plan, inventory, staticProgramGraph })
+  const output = writeRepositoryZones({ packageDir, zones, plan, inventory, staticProgramGraph, outputPath: plan.artifactRefs.finalRef })
+  const repositoryAtlas = generateRepositoryAtlasHtml({ packageDir }).output
+  console.log(JSON.stringify({
+    schemaVersion: 'repo-repository-zone-ingest-result/v1',
+    planId: plan.planId,
+    zonePlanId: zones.zonePlanId,
+    status: zones.status,
+    producer: zones.producer,
+    reviewer: zones.review.reviewer,
+    output,
+    metrics: zones.metrics,
+    repositoryAtlas,
+  }, null, 2))
+}
+
+function removeStaleRepositoryZoneArtifacts(packageDir, plan) {
+  const refs = [plan.artifactRefs.outputRef, plan.artifactRefs.reviewRef, plan.artifactRefs.finalRef]
+  for (const ref of refs) {
+    const target = path.resolve(packageDir, ref)
+    if (!fs.existsSync(target)) continue
+    const value = readJsonIfExists(target)
+    if (value?.planId !== plan.planId || value?.schemaVersion === 'repo-repository-zones/v1') fs.rmSync(target, { force: true })
+  }
+}
+
+function removeStaleRepositoryZoneReview(packageDir, plan, catalogHash) {
+  for (const ref of [plan.artifactRefs.reviewRef, plan.artifactRefs.finalRef]) {
+    const target = path.resolve(packageDir, ref)
+    const value = readJsonIfExists(target)
+    if (value && value?.review?.catalogHash !== catalogHash && value?.catalogHash !== catalogHash) fs.rmSync(target, { force: true })
+  }
 }
 
 function semanticPlan(argv) {
