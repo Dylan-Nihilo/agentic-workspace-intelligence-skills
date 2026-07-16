@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-repository-domain-summary-agent-plan/v1",
+  "type": "object",
+  "required": ["schemaVersion", "planId", "graphId", "snapshotId", "semanticCatalogHash", "zonePlanId", "zoneCatalogHash", "repoPath", "allowedZoneIds", "artifactRefs", "constraints", "agentRole", "reviewerRole", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-repository-domain-summary-agent-plan/v1" },
+    "planId": { "type": "string", "minLength": 1 },
+    "graphId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "semanticCatalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "zonePlanId": { "type": "string", "minLength": 1 },
+    "zoneCatalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "repoPath": { "type": "string", "minLength": 1 },
+    "allowedZoneIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "artifactRefs": {
+      "type": "object",
+      "required": ["contextRef", "outputRef", "reviewRef", "finalRef"],
+      "properties": {
+        "contextRef": { "type": "string", "minLength": 1 },
+        "outputRef": { "type": "string", "minLength": 1 },
+        "reviewRef": { "type": "string", "minLength": 1 },
+        "finalRef": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["authority", "coverage", "classification", "evidence", "maxEntriesPerZone", "maxCoreFilesPerZone", "maxBoundaryFilesPerZone"],
+      "properties": {
+        "authority": { "const": "agent-only" },
+        "coverage": { "const": "all-reviewed-zones-exactly-once" },
+        "classification": { "const": "reuse-reviewed-zone-membership" },
+        "evidence": { "const": "accepted-semantics-and-static-graph" },
+        "maxEntriesPerZone": { "type": "integer", "minimum": 1 },
+        "maxCoreFilesPerZone": { "type": "integer", "minimum": 1 },
+        "maxBoundaryFilesPerZone": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "agentRole": { "const": "repo-domain-interpreter" },
+    "reviewerRole": { "const": "repo-domain-summary-verifier" },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-repository-domain-summary-review/v1",
+  "type": "object",
+  "required": ["schemaVersion", "planId", "snapshotId", "catalogHash", "status", "checks", "issues", "reviewer", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-repository-domain-summary-review/v1" },
+    "planId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "catalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": { "enum": ["accepted", "changes-requested"] },
+    "checks": {
+      "type": "object",
+      "required": ["evidenceGrounding", "zoneCoverage", "entryAndCoreAccuracy", "boundaryAccuracy", "collaborationAccuracy", "noInventedBehavior", "unknownsPreserved"],
+      "properties": {
+        "evidenceGrounding": { "type": "boolean" },
+        "zoneCoverage": { "type": "boolean" },
+        "entryAndCoreAccuracy": { "type": "boolean" },
+        "boundaryAccuracy": { "type": "boolean" },
+        "collaborationAccuracy": { "type": "boolean" },
+        "noInventedBehavior": { "type": "boolean" },
+        "unknownsPreserved": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "issues": { "type": "array" },
+    "reviewer": {
+      "type": "object",
+      "required": ["kind", "agentId"],
+      "properties": {
+        "kind": { "const": "agent" },
+        "agentId": { "type": "string", "minLength": 1 },
+        "runId": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

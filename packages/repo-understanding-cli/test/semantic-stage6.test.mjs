@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { verifyNodeSemanticCoverage } from '../../repo-understanding-kernel/src/verification/frontend-package-verifier.mjs'
 import { nodeSemanticCatalogHash } from '../../repo-understanding-kernel/src/knowledge/node-semantic-review.mjs'
 import { repositoryZoneCatalogHash } from '../../repo-understanding-kernel/src/planning/repository-zones.mjs'
+import { repositoryDomainSummaryCatalogHash } from '../../repo-understanding-kernel/src/knowledge/repository-domain-summaries.mjs'
 
 const cliPackageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const cliPath = path.join(cliPackageDir, 'src', 'cli.mjs')
@@ -132,6 +133,28 @@ test('semantic-plan and semantic-ingest close Stage 6 coverage and refresh the A
   const acceptedZones = readJson(finalZonesPath)
   assert.equal(acceptedZones.schemaVersion, 'repo-repository-zones/v2')
   assert.equal(acceptedZones.review.status, 'accepted')
+
+  const summaryPlanResult = runCli(['domain-summary-plan', '--package', fixture.packageDir])
+  assert.equal(summaryPlanResult.schemaVersion, 'repo-repository-domain-summary-agent-plan-result/v1')
+  assert.equal(summaryPlanResult.status, 'waiting-for-agent')
+  assert.equal(summaryPlanResult.zones, 1)
+  const summaryPlan = readJson(summaryPlanResult.planPath)
+  const summaryContext = readJson(summaryPlanResult.contextPath)
+  assert.equal(summaryContext.zones.length, 1)
+  assert.equal(summaryContext.resultContract.producerKind, 'agent')
+  const summaryCatalog = buildDomainSummaryAgentCatalog({ plan: summaryPlan, zone: acceptedZones.zones[0] })
+  writeJson(summaryPlanResult.outputPath, summaryCatalog)
+  const summaryReviewResult = runCli(['domain-summary-review-plan', '--package', fixture.packageDir])
+  assert.equal(summaryReviewResult.schemaVersion, 'repo-repository-domain-summary-review-plan-result/v1')
+  assert.equal(summaryReviewResult.catalogHash, repositoryDomainSummaryCatalogHash(summaryCatalog))
+  writeJson(summaryReviewResult.reviewPath, buildDomainSummaryAgentReview({ plan: summaryPlan, catalog: summaryCatalog }))
+  const summaryIngestResult = runCli(['domain-summary-ingest', '--package', fixture.packageDir])
+  assert.equal(summaryIngestResult.schemaVersion, 'repo-repository-domain-summary-ingest-result/v1')
+  assert.equal(summaryIngestResult.status, 'complete')
+  assert.equal(summaryIngestResult.metrics.zones, 1)
+  const acceptedSummaries = readJson(summaryIngestResult.output)
+  assert.equal(acceptedSummaries.schemaVersion, 'repo-repository-domain-summaries/v1')
+  assert.equal(acceptedSummaries.review.status, 'accepted')
 })
 
 function createStage6Fixture(t) {
@@ -325,6 +348,57 @@ function buildDomainAgentReview({ plan, catalog }) {
     issues: [],
     reviewer: { kind: 'agent', agentId: 'domain-verifier:cli-fixture', runId: 'review:domain-cli' },
     generatedAt: '2026-07-15T00:03:00Z',
+  }
+}
+
+function buildDomainSummaryAgentCatalog({ plan, zone }) {
+  const semanticEvidence = [{ kind: 'semantic', filePath: 'src/App.vue', startLine: 1, endLine: 4, claim: 'S6 语义确认 App.vue 承载 fixture 应用。' }]
+  return {
+    schemaVersion: 'repo-repository-domain-summaries/v1',
+    summaryCatalogId: 'domain-summary-agent:cli-fixture',
+    planId: plan.planId,
+    snapshotId: plan.snapshotId,
+    graphId: plan.graphId,
+    semanticCatalogHash: plan.semanticCatalogHash,
+    zonePlanId: plan.zonePlanId,
+    zoneCatalogHash: plan.zoneCatalogHash,
+    status: 'draft',
+    producer: { kind: 'agent', agentId: 'domain-interpreter:cli-fixture', runId: 'run:domain-summary-cli' },
+    summaries: [{
+      zoneId: zone.zoneId,
+      label: zone.label,
+      responsibility: { summary: '承载 fixture 应用入口、模型、工具和资源。', evidenceRefs: semanticEvidence },
+      entryFiles: [{ filePath: 'src/App.vue', reason: 'App.vue 是 fixture 应用入口。', evidenceRefs: semanticEvidence }],
+      coreFiles: [{ filePath: 'src/App.vue', reason: 'App.vue 承载应用主体。', evidenceRefs: semanticEvidence }],
+      boundaryFiles: [],
+      collaboratingDomains: [],
+      outputs: [{ name: 'Fixture 应用界面', description: '提供可挂载的 fixture 应用。', evidenceRefs: semanticEvidence }],
+      unknowns: [],
+      confidence: 0.9,
+    }],
+    generatedAt: '2026-07-16T00:04:00Z',
+  }
+}
+
+function buildDomainSummaryAgentReview({ plan, catalog }) {
+  return {
+    schemaVersion: 'repo-repository-domain-summary-review/v1',
+    planId: plan.planId,
+    snapshotId: plan.snapshotId,
+    catalogHash: repositoryDomainSummaryCatalogHash(catalog),
+    status: 'accepted',
+    checks: {
+      evidenceGrounding: true,
+      zoneCoverage: true,
+      entryAndCoreAccuracy: true,
+      boundaryAccuracy: true,
+      collaborationAccuracy: true,
+      noInventedBehavior: true,
+      unknownsPreserved: true,
+    },
+    issues: [],
+    reviewer: { kind: 'agent', agentId: 'domain-summary-verifier:cli-fixture', runId: 'review:domain-summary-cli' },
+    generatedAt: '2026-07-16T00:05:00Z',
   }
 }
 

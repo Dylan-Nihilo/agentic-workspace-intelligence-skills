@@ -32,15 +32,24 @@ test('repository atlas renders the progressive file tree without Product Maps', 
     const html = render(root)
     assertEmbeddedScriptParses(html)
     assert.match(html, /Repository Atlas/)
-    assert.match(html, /Stage 05 \/ 11/)
+    assert.match(html, /Stage 05 \/ 12/)
     assert.match(html, /id="file-tree"/)
     assert.match(html, /id="dependency-flow"/)
     assert.match(html, /data-shared-ref/)
     assert.match(html, /共享节点 · 已合并到首次出现/)
+    assert.match(html, /data-reference-kind="cycle"/)
+    assert.match(html, /事件回路 · 返回已有节点/)
+    assert.match(html, /flow-reference--cycle/)
     assert.match(html, /class:'shared-link-layer'/)
     assert.match(html, /双指捏合缩放 · 三指\/鼠标拖拽移动/)
     assert.match(html, /multiPointerGesture\.kind==='pan'/)
     assert.match(html, /kind:'pinch'/)
+    assert.match(html, /function animateCameraTo\(nextX,nextY,onComplete\)/)
+    assert.match(html, /function easeOutQuint\(value\)/)
+    assert.match(html, /dataset\.cameraAnimating='true'/)
+    assert.match(html, /revealCameraElement\(target,true,true/)
+    assert.match(html, /flow-reference-arrival/)
+    assert.match(html, /prefersReducedMotion\.matches/)
     assert.doesNotMatch(html, /id="relation-canvas"/)
     assert.doesNotMatch(html, /behavior-path-select|s7-layer-switch/)
   } finally {
@@ -141,12 +150,69 @@ test('stage seven preserves the visible S6 tree and adds reviewed Agent domains'
     assert.match(html, /semantic-territory__shape/)
     assert.match(html, /function drawSemanticTerritories\(visible\)/)
     assert.match(html, /flowHost\.appendChild\(labelSvg\)/)
-    assert.match(html, /function arrangeVisibleStageSevenChildren\(items\)/)
+    assert.match(html, /function arrangeVisibleDomainChildren\(items\)/)
     assert.match(html, /data-zone-id/)
     assert.match(html, /expandedNodes\.has\(filePath\)/)
     assert.match(html, /沿用 S6 树形结构/)
     assert.match(html, /Domain Agent 已将同一棵文件树组织为仓库领域/)
     assert.doesNotMatch(html, /dynamic-zone-frame|data-zone-frame|behavior-path-select|s7-layer-switch/)
+    assertEmbeddedScriptParses(html)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('stage eight keeps the S7 tree and projects reviewed domain responsibilities onto it', () => {
+  const root = fixture('repo-atlas-domain-understanding-')
+  try {
+    seedBasePackage(root)
+    write(root, 'store/node-semantics.json', {
+      schemaVersion: 'repo-node-semantics/v1',
+      status: 'complete',
+      entries: [
+        semantic('src/main.ts', '应用入口', '挂载应用。'),
+        semantic('src/views/Merchant.vue', '商户页面', '查询和维护商户。'),
+      ],
+    })
+    writeReviewedZones(root)
+    write(root, 'store/repository-domain-summaries.json', {
+      schemaVersion: 'repo-repository-domain-summaries/v1',
+      summaryCatalogId: 'repository-domain-summaries:test',
+      planId: 'repository-domain-summary-agent-plan:test',
+      snapshotId: 'snapshot:test',
+      graphId: 'graph:test',
+      semanticCatalogHash: `sha256:${'a'.repeat(64)}`,
+      zonePlanId: 'repository-zones:test',
+      zoneCatalogHash: `sha256:${'b'.repeat(64)}`,
+      status: 'complete',
+      producer: { kind: 'agent', agentId: 'domain-interpreter:test' },
+      review: { status: 'accepted', catalogHash: `sha256:${'c'.repeat(64)}`, reviewer: { kind: 'agent', agentId: 'domain-summary-verifier:test' } },
+      summaries: [
+        domainSummary('application-shell', '应用骨架', '负责应用启动、运行时装配与领域页面接入。', 'src/main.ts', 'src/main.ts', 'merchant-domain'),
+        domainSummary('merchant-domain', '商户领域', '负责商户资料查询与维护界面。', 'src/views/Merchant.vue', 'src/views/Merchant.vue', 'application-shell'),
+      ],
+      metrics: { zones: 2, entryFiles: 2, coreFiles: 2, boundaryFiles: 2, collaborations: 2, unknowns: 2 },
+      generatedAt: '2026-07-16T00:00:00.000Z',
+    })
+
+    const model = buildRepositoryAtlasModel(root)
+    assert.equal(model.stages[7].status, 'complete')
+    assert.equal(model.summary.understoodDomains, 2)
+    assert.equal(model.summary.domainBoundaryFiles, 2)
+    assert.equal(model.repositoryDomainSummaries.review.status, 'accepted')
+
+    const html = render(root)
+    assert.match(html, /Agent Domain Understanding/)
+    assert.match(html, /id="domain-companion"/)
+    assert.match(html, /function renderDomainCompanion\(\)/)
+    assert.match(html, /function setDomainFocus\(zoneId\)/)
+    assert.match(html, /data-domain-focus/)
+    assert.match(html, /flow-badge--domain-role/)
+    assert.match(html, /flow-relation--domain-boundary/)
+    assert.match(html, /卡片标记入口 \/ 核心 \/ 边界/)
+    assert.match(html, /负责应用启动、运行时装配与领域页面接入/)
+    assert.match(html, /semantic-tree-layout/)
+    assert.doesNotMatch(html, /id="domain-understanding-graph"|domain-map-canvas/)
     assertEmbeddedScriptParses(html)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
@@ -187,6 +253,33 @@ function seedBasePackage(root) {
   write(root, 'state/run-state.json', { schemaVersion: 'repo-run-state/v3', workItems: {} })
 }
 
+function writeReviewedZones(root) {
+  write(root, 'planning/repository-zones.json', {
+    schemaVersion: 'repo-repository-zones/v2',
+    zonePlanId: 'repository-zones:test',
+    planId: 'repository-zone-agent-plan:test',
+    snapshotId: 'snapshot:test',
+    graphId: 'graph:test',
+    semanticCatalogHash: `sha256:${'a'.repeat(64)}`,
+    status: 'complete',
+    producer: { kind: 'agent', agentId: 'domain-agent:test' },
+    review: { status: 'accepted', reviewer: { kind: 'agent', agentId: 'domain-verifier:test' } },
+    unknowns: [],
+    gates: {},
+    metrics: { files: 3, zones: 2, subzones: 2, unclassifiedFiles: 0, crossZoneRelations: 1 },
+    zones: [
+      zone('application-shell', '应用骨架', 'shell:runtime', '启动与运行时', ['package.json', 'src/main.ts']),
+      zone('merchant-domain', '商户领域', 'merchant:management', '商户管理', ['src/views/Merchant.vue']),
+    ],
+    memberships: [
+      membership('package.json', 'application-shell', 'shell:runtime', '构建清单'),
+      membership('src/main.ts', 'application-shell', 'shell:runtime', '应用入口'),
+      membership('src/views/Merchant.vue', 'merchant-domain', 'merchant:management', '商户页面'),
+    ],
+    crossZoneRelations: [{ fromZoneId: 'application-shell', toZoneId: 'merchant-domain', count: 1, edgeTypes: { imports: 1 } }],
+  })
+}
+
 function fixture(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 }
@@ -213,6 +306,22 @@ function zone(zoneId, label, subzoneId, subzoneLabel, memberFilePaths) {
 
 function membership(filePath, zoneId, subzoneId, semanticTitle) {
   return { filePath, zoneId, subzoneId, role: 'repository-member', confidence: 0.96, status: 'accepted', semanticTitle, semanticSummary: semanticTitle }
+}
+
+function domainSummary(zoneId, label, responsibility, entryFilePath, coreFilePath, collaboratorZoneId) {
+  const evidence = filePath => [{ kind: 'zone', filePath, claim: 'Reviewed fixture evidence.' }]
+  return {
+    zoneId,
+    label,
+    responsibility: { summary: responsibility, evidenceRefs: evidence(coreFilePath) },
+    entryFiles: [{ filePath: entryFilePath, reason: '领域入口。', evidenceRefs: evidence(entryFilePath) }],
+    coreFiles: [{ filePath: coreFilePath, reason: '核心职责载体。', evidenceRefs: evidence(coreFilePath) }],
+    boundaryFiles: [{ filePath: coreFilePath, direction: 'outbound', connectedZoneIds: [collaboratorZoneId], reason: '跨领域连接点。', evidenceRefs: evidence(coreFilePath) }],
+    collaboratingDomains: [{ zoneId: collaboratorZoneId, direction: 'outbound', relationCount: 1, summary: '通过静态文件关系协作。', evidenceRefs: evidence(coreFilePath) }],
+    outputs: [{ name: '领域能力', description: '向相邻领域提供已声明能力。', evidenceRefs: evidence(coreFilePath) }],
+    unknowns: [{ question: '运行时选择仍需确认。', reason: '静态证据不足。', evidenceRefs: [] }],
+    confidence: 0.9,
+  }
 }
 
 function render(root) {

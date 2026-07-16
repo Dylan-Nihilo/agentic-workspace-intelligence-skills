@@ -20,6 +20,8 @@ frontend census
   -> Domain Agent proposal -> independent Agent review -> serial acceptance
   -> progressive Repository Atlas regions over the current S6 expansion
   -> Stage 7 delivery boundary
+  -> Domain interpreter summaries -> independent Agent review -> serial acceptance
+  -> Stage 8 responsibility / entry / core / boundary projection on the same tree
   -> optional governed Journey research (separate follow-up)
   -> qualified semantic OpenQuestions
   -> ResearchContract -> WorkItem v3 -> TaskOutcome -> serial ingest
@@ -31,13 +33,13 @@ frontend census
 
 Parser, compiler, import-resolution, and file failures remain deterministic diagnostics. Runtime-only evidence and product intent remain explicitly blocked. Only semantic ambiguity with competing hypotheses can create a ResearchContract.
 
-`repository-atlas.html` is the progressive deterministic surface. It is available after static analysis, remains valid when semantic research is blocked, and is refreshed by the CLI as later stages mutate package state. Its stage controls show the verified artifact delta at each step, while the dependency view starts with one top-down layer and expands on demand in either direction. Stage 7 reuses that exact visible-node set, expansion state, and top-down tree. It may stably cluster the already-selected siblings by semantic region, then paints non-rectangular low-contrast territories behind the visible branches as expansion changes. It never eagerly renders the whole repository or replaces the tree with region boxes. It is intentionally separate from the Journey-gated `human-readable.html` delivery.
+`repository-atlas.html` is the progressive deterministic surface. It is available after static analysis, remains valid when semantic research is blocked, and is refreshed by the CLI as later stages mutate package state. Its stage controls show the verified artifact delta at each step, while the dependency view starts with one top-down layer and expands on demand in either direction. Stage 7 reuses that exact visible-node set, expansion state, and top-down tree. It may stably cluster the already-selected siblings by semantic region, then paints non-rectangular low-contrast territories behind the visible branches as expansion changes. Stage 8 keeps that tree and those positions, adds entry/core/boundary badges, and lets a domain title focus the relevant cards while a companion panel explains responsibility, collaborations, outputs, and unknowns. Every file keeps one canonical full card: ordinary reuse becomes a shared reference, while an ancestor cycle becomes a compact event-loop reference back to that card. It never eagerly renders the whole repository or replaces the tree with a second graph. It is intentionally separate from the Journey-gated `human-readable.html` delivery.
 
 ```bash
 npm run --silent understanding:harness -- atlas --package /path/to/package
 ```
 
-The CLI does not spawn an agent runtime. For Stage 6 it emits bounded node-semantic contexts. For Stage 7, `zone-plan` emits an Agent-only domain-analysis contract and context; it creates no domains or memberships. A `repo-domain-analyzer` proposes repository-specific domains from accepted S6 semantics and graph relations, a different `repo-domain-verifier` reviews the exact proposal hash, and only `zone-ingest` can publish `planning/repository-zones.json`. The kernel never classifies domains with path regexes, directory maps, fixed domain labels, or dependency thresholds. Later governed Journey research still uses WorkItems.
+The CLI does not spawn an agent runtime. For Stage 6 it emits bounded node-semantic contexts. For Stage 7, `zone-plan` emits an Agent-only domain-analysis contract and context; it creates no domains or memberships. A `repo-domain-analyzer` proposes repository-specific domains from accepted S6 semantics and graph relations, a different `repo-domain-verifier` reviews the exact proposal hash, and only `zone-ingest` can publish `planning/repository-zones.json`. For Stage 8, `domain-summary-plan` freezes those reviewed memberships and emits evidence-rich per-domain context. A `repo-domain-interpreter` explains every reviewed domain, a separate `repo-domain-summary-verifier` reviews the exact draft hash, and only `domain-summary-ingest` publishes `store/repository-domain-summaries.json`. The kernel neither classifies domains nor invents their responsibilities. Later governed Journey research still uses WorkItems.
 
 ## Commands
 
@@ -51,6 +53,9 @@ npm run understanding:harness -- semantic-ingest --package /path/to/package
 npm run understanding:harness -- zone-plan --package /path/to/package
 npm run understanding:harness -- zone-review-plan --package /path/to/package
 npm run understanding:harness -- zone-ingest --package /path/to/package
+npm run understanding:harness -- domain-summary-plan --package /path/to/package
+npm run understanding:harness -- domain-summary-review-plan --package /path/to/package
+npm run understanding:harness -- domain-summary-ingest --package /path/to/package
 npm run understanding:harness -- journeys --package /path/to/package --definitions /path/to/definitions.json --bindings /path/to/bindings.json
 npm run understanding:harness -- dispatch --package /path/to/package --max-tasks 8
 npm run understanding:harness -- ingest --package /path/to/package --work-result /path/to/work-result.json
@@ -82,6 +87,7 @@ package/
   planning/
     node-semantic-batches.json
     repository-zone-agent-plan.json
+    repository-domain-summary-agent-plan.json
     repository-zones.json
     open-questions.json
     manifest.json
@@ -94,6 +100,9 @@ package/
     repository-zones/context.json
     repository-zones/result.json
     repository-zones/review.json
+    repository-domain-summaries/context.json
+    repository-domain-summaries/result.json
+    repository-domain-summaries/review.json
     dispatch/*
   work/
     items/*.json
@@ -106,6 +115,7 @@ package/
     claims.jsonl
     semantic-store-manifest.json
     node-semantics.json
+    repository-domain-summaries.json
     run-events.jsonl
     journeys/
   projections/
@@ -126,6 +136,7 @@ package/
 - SupportDecision, snapshot, graph, semantic store, and InvestigationFrame agree.
 - Node Semantic Catalog has accepted every eligible Vue/JavaScript/TypeScript/HTML file before Stage 7 domain zoning starts.
 - Repository zones come from the Domain Agent, cover every inventory file once, and pass an independent review bound to the exact proposal hash.
+- Repository domain summaries preserve the reviewed Stage 7 titles and memberships, cover every domain once, ground positive claims in accepted semantics or real directed graph relations, and pass an independent review bound to the exact draft hash.
 - No blocking WorkItem is active, rejected without a retry, or partially accepted.
 - Critical semantic questions are resolved; runtime and product-intent blockers are explicit.
 - Every critical Journey is closed against the current graph and governed knowledge.

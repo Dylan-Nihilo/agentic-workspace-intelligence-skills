@@ -46,20 +46,21 @@ flowchart LR
 关键约束：
 
 - TypeScript、Babel 和 Vue compiler 负责确定性结构抽取；解析或 import 失败进入 diagnostics，不转成 agent 任务。
-- Repository Atlas 在同一棵文件树上渐进增加节点语义和 Agent 领域划分；领域结果必须独立审核，kernel 不使用静态规则替 Agent 分类。
+- Repository Atlas 在同一棵文件树上渐进增加节点语义、Agent 领域划分和领域职责解释；领域划分与领域理解都必须独立审核，kernel 不使用静态规则替 Agent 判断。
 - 只有至少存在两个竞争 Hypothesis 的真实语义歧义，才能生成 `ResearchContract`。
 - `runtime-external-blocked` 留作运行时限制；`product-intent` 交给用户或产品资料，均不派 repo explorer。
 - Worker 只能写自己的 TaskOutcome 和 WorkResult；只有 orchestrator ingest 能更新 authoritative store。
 - Host 可以并行执行独立 WorkItem，但必须等待 Join 后串行 ingest。
 - Journey 未闭合、关键问题未解决、Map 过期或 narrative 未 grounding 时，交付门禁不会通过。
 
-## 六类权威数据
+## 七类权威数据
 
 | 数据 | 作用 | 主要路径 |
 |---|---|---|
 | Static Program Graph | 编译得到的文件、模块、route、page、UI event、handler、state、request、endpoint 等结构 | `static/static-program-graph.json` |
 | Node Semantic Catalog | 每个可分析代码文件的职责、输入、动作、状态、输出、边界、协作者与未知项 | `store/node-semantics.json` |
 | Repository Zones | 经独立审核的仓库领域、子领域、文件唯一归属与待确认项 | `planning/repository-zones.json` |
+| Repository Domain Summaries | 经独立审核的领域职责、入口、核心、边界、协作、产物与未知项 | `store/repository-domain-summaries.json` |
 | Semantic store | 源文件 Evidence 和经 TaskOutcome 治理后的 accepted/refuted Claim | `store/evidence.jsonl`、`store/claims.jsonl` |
 | Journey store | actor、goal、trigger、steps、feedback、outcomes 及代码实体绑定和 closure report | `store/journeys/` |
 | Product Maps | 面向消费的 Application、Experience、Runtime Flow、Change 四张确定性投影 | `projections/` |
@@ -142,12 +143,14 @@ npm run understanding:harness -- atlas --package /tmp/frontend-understanding
 │   ├── manifest.json
 │   ├── node-semantic-batches.json
 │   ├── repository-zone-agent-plan.json
+│   ├── repository-domain-summary-agent-plan.json
 │   ├── repository-zones.json
 │   ├── open-questions.json
 │   └── contracts/*.json
 ├── research/
 │   ├── node-semantics/{contexts,results,review-dispatch,reviews}/
 │   ├── repository-zones/{context,result,review}.json
+│   ├── repository-domain-summaries/{context,result,review}.json
 │   └── dispatch/<batch>/
 │       ├── manifest.json
 │       ├── *.md
@@ -160,6 +163,7 @@ npm run understanding:harness -- atlas --package /tmp/frontend-understanding
 │   ├── claims.jsonl
 │   ├── semantic-store-manifest.json
 │   ├── node-semantics.json
+│   ├── repository-domain-summaries.json
 │   ├── journeys/
 │   │   ├── definitions/*.json
 │   │   ├── bindings/*.json
@@ -245,6 +249,7 @@ node --test packages/repo-understanding-kernel/test/*.test.mjs
 | skill 与实现维护边界 | [Harness Skill Plan](docs/harness-skill-plan.md) |
 | Stage 6 文件节点语义 | [Node Semantic Enrichment](docs/stage-6-node-semantic-enrichment-design.md) |
 | Stage 7 Agent 领域划分 | [Agent Domain Zoning](docs/stage-7-agent-domain-zoning-design.md) |
+| Stage 8 Agent 领域理解 | [Agent Domain Understanding](docs/stage-8-agent-domain-understanding-design.md) |
 | 历史 v1/v2：Skill 规范化 | [设计](docs/skill-standardization-design.md) · [构建指南](docs/skill-standardization-build-guide.md) · [返修](docs/skill-standardization-remediation.md) |
 | 历史 v2：模型分档 | [设计](docs/model-tier-dispatch-design.md) · [构建指南](docs/model-tier-dispatch-build-guide.md) |
 | 契约测试 | [evals/README](evals/README.md) |

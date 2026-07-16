@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repo-repository-domain-summaries/v1",
+  "type": "object",
+  "required": ["schemaVersion", "summaryCatalogId", "planId", "snapshotId", "graphId", "semanticCatalogHash", "zonePlanId", "zoneCatalogHash", "status", "producer", "summaries", "generatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "repo-repository-domain-summaries/v1" },
+    "summaryCatalogId": { "type": "string", "minLength": 1 },
+    "planId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "graphId": { "type": "string", "minLength": 1 },
+    "semanticCatalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "zonePlanId": { "type": "string", "minLength": 1 },
+    "zoneCatalogHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "status": { "enum": ["draft", "complete"] },
+    "producer": {
+      "type": "object",
+      "required": ["kind", "agentId"],
+      "properties": {
+        "kind": { "const": "agent" },
+        "agentId": { "type": "string", "minLength": 1 },
+        "runId": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "summaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/domainSummary" }
+    },
+    "review": { "type": "object" },
+    "metrics": { "type": "object" },
+    "generatedAt": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": ["kind", "filePath", "claim"],
+      "properties": {
+        "kind": { "enum": ["semantic", "graph", "zone"] },
+        "filePath": { "type": "string", "minLength": 1 },
+        "relatedFilePath": { "type": "string", "minLength": 1 },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 },
+        "claim": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "fileRole": {
+      "type": "object",
+      "required": ["filePath", "reason", "evidenceRefs"],
+      "properties": {
+        "filePath": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "evidenceRefs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+      },
+      "additionalProperties": false
+    },
+    "boundaryFile": {
+      "type": "object",
+      "required": ["filePath", "direction", "connectedZoneIds", "reason", "evidenceRefs"],
+      "properties": {
+        "filePath": { "type": "string", "minLength": 1 },
+        "direction": { "enum": ["inbound", "outbound", "bidirectional"] },
+        "connectedZoneIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "reason": { "type": "string", "minLength": 1 },
+        "evidenceRefs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+      },
+      "additionalProperties": false
+    },
+    "collaboration": {
+      "type": "object",
+      "required": ["zoneId", "direction", "relationCount", "summary", "evidenceRefs"],
+      "properties": {
+        "zoneId": { "type": "string", "minLength": 1 },
+        "direction": { "enum": ["inbound", "outbound", "bidirectional"] },
+        "relationCount": { "type": "integer", "minimum": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "evidenceRefs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+      },
+      "additionalProperties": false
+    },
+    "domainSummary": {
+      "type": "object",
+      "required": ["zoneId", "label", "responsibility", "entryFiles", "coreFiles", "boundaryFiles", "collaboratingDomains", "outputs", "unknowns", "confidence"],
+      "properties": {
+        "zoneId": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "responsibility": {
+          "type": "object",
+          "required": ["summary", "evidenceRefs"],
+          "properties": {
+            "summary": { "type": "string", "minLength": 1 },
+            "evidenceRefs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+          },
+          "additionalProperties": false
+        },
+        "entryFiles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/fileRole" } },
+        "coreFiles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/fileRole" } },
+        "boundaryFiles": { "type": "array", "items": { "$ref": "#/$defs/boundaryFile" } },
+        "collaboratingDomains": { "type": "array", "items": { "$ref": "#/$defs/collaboration" } },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "evidenceRefs"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 },
+              "evidenceRefs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+            },
+            "additionalProperties": false
+          }
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["question", "reason", "evidenceRefs"],
+            "properties": {
+              "question": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 },
+              "evidenceRefs": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+            },
+            "additionalProperties": false
+          }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

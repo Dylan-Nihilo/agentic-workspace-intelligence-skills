@@ -79,6 +79,18 @@ import {
   writeRepositoryZoneAgentPlan,
   writeRepositoryZones,
 } from '../../repo-understanding-kernel/src/planning/repository-zones.mjs'
+import {
+  acceptRepositoryDomainSummaryCatalog,
+  buildRepositoryDomainSummaryAgentContext,
+  buildRepositoryDomainSummaryAgentPlan,
+  repositoryDomainSummaryCatalogHash,
+  repositoryDomainSummaryReviewChecks,
+  validateRepositoryDomainSummaryDraft,
+  validateRepositoryDomainSummaryReview,
+  writeRepositoryDomainSummaries,
+  writeRepositoryDomainSummaryAgentContext,
+  writeRepositoryDomainSummaryAgentPlan,
+} from '../../repo-understanding-kernel/src/knowledge/repository-domain-summaries.mjs'
 import { buildNodeSemanticContext } from '../../repo-understanding-kernel/src/knowledge/node-semantic-context.mjs'
 import {
   acceptNodeSemanticBatchCatalog,
@@ -128,6 +140,9 @@ function usage(exitCode = 1) {
   harness zone-plan --package /path/to/package [--max-zones 24] [--max-subzones 96]
   harness zone-review-plan --package /path/to/package
   harness zone-ingest --package /path/to/package
+  harness domain-summary-plan --package /path/to/package [--max-entries 12] [--max-core-files 12] [--max-boundary-files 16]
+  harness domain-summary-review-plan --package /path/to/package
+  harness domain-summary-ingest --package /path/to/package
   harness semantic-review-plan --package /path/to/package
   harness semantic-ingest --package /path/to/package
   harness html --package /path/to/package [--out /path/to/human-readable.html]
@@ -158,6 +173,9 @@ async function main() {
   if (command === 'zone-plan') return zonePlan(argv)
   if (command === 'zone-review-plan') return zoneReviewPlan(argv)
   if (command === 'zone-ingest') return zoneIngest(argv)
+  if (command === 'domain-summary-plan') return domainSummaryPlan(argv)
+  if (command === 'domain-summary-review-plan') return domainSummaryReviewPlan(argv)
+  if (command === 'domain-summary-ingest') return domainSummaryIngest(argv)
   if (command === 'semantic-review-plan') return semanticReviewPlan(argv)
   if (command === 'semantic-ingest') return semanticIngest(argv)
   if (command === 'html') return html(argv)
@@ -1202,6 +1220,109 @@ function zoneIngest(argv) {
   }, null, 2))
 }
 
+function domainSummaryPlan(argv) {
+  const args = parseArgs(argv, ['package'])
+  const packageDir = path.resolve(args.package)
+  const inventory = readJson(path.join(packageDir, 'static', 'inventory.json'))
+  const staticProgramGraph = readJson(path.join(packageDir, 'static', 'static-program-graph.json'))
+  const nodeSemanticCatalog = readJson(path.join(packageDir, 'store', 'node-semantics.json'))
+  const repositoryZones = readJson(path.join(packageDir, 'planning', 'repository-zones.json'))
+  const plan = buildRepositoryDomainSummaryAgentPlan({
+    inventory,
+    staticProgramGraph,
+    nodeSemanticCatalog,
+    repositoryZones,
+    repoPath: inventory.repo?.path,
+    maxEntriesPerZone: args['max-entries'] ? Number(args['max-entries']) : 12,
+    maxCoreFilesPerZone: args['max-core-files'] ? Number(args['max-core-files']) : 12,
+    maxBoundaryFilesPerZone: args['max-boundary-files'] ? Number(args['max-boundary-files']) : 16,
+  })
+  const planPath = writeRepositoryDomainSummaryAgentPlan({ packageDir, plan, repositoryZones, staticProgramGraph, nodeSemanticCatalog })
+  const context = buildRepositoryDomainSummaryAgentContext({ plan, repositoryZones, staticProgramGraph, nodeSemanticCatalog, inventory })
+  const contextPath = writeRepositoryDomainSummaryAgentContext({ packageDir, context, outputPath: plan.artifactRefs.contextRef })
+  removeStaleRepositoryDomainSummaryArtifacts(packageDir, plan)
+  const repositoryAtlas = generateRepositoryAtlasHtml({ packageDir }).output
+  console.log(JSON.stringify({
+    schemaVersion: 'repo-repository-domain-summary-agent-plan-result/v1',
+    planId: plan.planId,
+    status: 'waiting-for-agent',
+    authority: plan.constraints.authority,
+    zones: plan.allowedZoneIds.length,
+    planPath,
+    contextPath,
+    outputPath: path.resolve(packageDir, plan.artifactRefs.outputRef),
+    reviewPath: path.resolve(packageDir, plan.artifactRefs.reviewRef),
+    resultSchemaPath: path.join(KERNEL_DIR, 'schemas', 'repository-domain-summaries.schema.json'),
+    repositoryAtlas,
+  }, null, 2))
+}
+
+function domainSummaryReviewPlan(argv) {
+  const args = parseArgs(argv, ['package'])
+  const packageDir = path.resolve(args.package)
+  const staticProgramGraph = readJson(path.join(packageDir, 'static', 'static-program-graph.json'))
+  const repositoryZones = readJson(path.join(packageDir, 'planning', 'repository-zones.json'))
+  const plan = readJson(path.join(packageDir, 'planning', 'repository-domain-summary-agent-plan.json'))
+  const catalogPath = path.resolve(packageDir, plan.artifactRefs.outputRef)
+  const catalog = readJson(catalogPath)
+  const issues = validateRepositoryDomainSummaryDraft({ catalog, plan, repositoryZones, staticProgramGraph })
+  if (issues.length) throw new Error(`Invalid Repository Domain Summary Agent draft:\n- ${issues.join('\n- ')}`)
+  const reviewPath = path.resolve(packageDir, plan.artifactRefs.reviewRef)
+  const dispatchPath = path.join(packageDir, 'research', 'repository-domain-summaries', 'review-dispatch.json')
+  const catalogHash = repositoryDomainSummaryCatalogHash(catalog)
+  removeStaleRepositoryDomainSummaryReview(packageDir, plan, catalogHash)
+  const dispatch = {
+    schemaVersion: 'repo-repository-domain-summary-review-dispatch/v1',
+    planId: plan.planId,
+    snapshotId: plan.snapshotId,
+    reviewerRole: plan.reviewerRole,
+    producerAgentId: catalog.producer.agentId,
+    catalogPath,
+    catalogHash,
+    contextPath: path.resolve(packageDir, plan.artifactRefs.contextRef),
+    reviewPath,
+    reviewSchemaPath: path.join(KERNEL_DIR, 'schemas', 'repository-domain-summary-review.schema.json'),
+    requiredChecks: repositoryDomainSummaryReviewChecks(),
+  }
+  ensureDir(path.dirname(dispatchPath))
+  fs.writeFileSync(dispatchPath, `${JSON.stringify(dispatch, null, 2)}\n`, 'utf8')
+  const repositoryAtlas = generateRepositoryAtlasHtml({ packageDir }).output
+  console.log(JSON.stringify({
+    schemaVersion: 'repo-repository-domain-summary-review-plan-result/v1',
+    planId: plan.planId,
+    catalogHash,
+    dispatchPath,
+    reviewPath,
+    repositoryAtlas,
+  }, null, 2))
+}
+
+function domainSummaryIngest(argv) {
+  const args = parseArgs(argv, ['package'])
+  const packageDir = path.resolve(args.package)
+  const staticProgramGraph = readJson(path.join(packageDir, 'static', 'static-program-graph.json'))
+  const repositoryZones = readJson(path.join(packageDir, 'planning', 'repository-zones.json'))
+  const plan = readJson(path.join(packageDir, 'planning', 'repository-domain-summary-agent-plan.json'))
+  const catalog = readJson(path.resolve(packageDir, plan.artifactRefs.outputRef))
+  const review = readJson(path.resolve(packageDir, plan.artifactRefs.reviewRef))
+  const reviewIssues = validateRepositoryDomainSummaryReview({ review, plan, catalog })
+  if (reviewIssues.length) throw new Error(`Invalid Repository Domain Summary Agent review:\n- ${reviewIssues.join('\n- ')}`)
+  const summaries = acceptRepositoryDomainSummaryCatalog({ catalog, review, plan, repositoryZones, staticProgramGraph })
+  const output = writeRepositoryDomainSummaries({ packageDir, summaries, plan, repositoryZones, staticProgramGraph, outputPath: plan.artifactRefs.finalRef })
+  const repositoryAtlas = generateRepositoryAtlasHtml({ packageDir }).output
+  console.log(JSON.stringify({
+    schemaVersion: 'repo-repository-domain-summary-ingest-result/v1',
+    planId: plan.planId,
+    summaryCatalogId: summaries.summaryCatalogId,
+    status: summaries.status,
+    producer: summaries.producer,
+    reviewer: summaries.review.reviewer,
+    output,
+    metrics: summaries.metrics,
+    repositoryAtlas,
+  }, null, 2))
+}
+
 function removeStaleRepositoryZoneArtifacts(packageDir, plan) {
   const refs = [plan.artifactRefs.outputRef, plan.artifactRefs.reviewRef, plan.artifactRefs.finalRef]
   for (const ref of refs) {
@@ -1209,6 +1330,24 @@ function removeStaleRepositoryZoneArtifacts(packageDir, plan) {
     if (!fs.existsSync(target)) continue
     const value = readJsonIfExists(target)
     if (value?.planId !== plan.planId || value?.schemaVersion === 'repo-repository-zones/v1') fs.rmSync(target, { force: true })
+  }
+}
+
+function removeStaleRepositoryDomainSummaryArtifacts(packageDir, plan) {
+  const refs = [plan.artifactRefs.outputRef, plan.artifactRefs.reviewRef, plan.artifactRefs.finalRef]
+  for (const ref of refs) {
+    const target = path.resolve(packageDir, ref)
+    if (!fs.existsSync(target)) continue
+    const value = readJsonIfExists(target)
+    if (value?.planId !== plan.planId) fs.rmSync(target, { force: true })
+  }
+}
+
+function removeStaleRepositoryDomainSummaryReview(packageDir, plan, catalogHash) {
+  for (const ref of [plan.artifactRefs.reviewRef, plan.artifactRefs.finalRef]) {
+    const target = path.resolve(packageDir, ref)
+    const value = readJsonIfExists(target)
+    if (value && value?.review?.catalogHash !== catalogHash && value?.catalogHash !== catalogHash) fs.rmSync(target, { force: true })
   }
 }
 
